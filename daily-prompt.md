@@ -64,7 +64,7 @@ Only collect listings that:
 - Are in or near preferred neighborhoods (not in avoid list)
 - Are not in `seen_links` or `seen_addresses`
 
-Collect **at least 15 raw candidates** before filtering, so Step 5's diversity rule has room to work.
+Collect **at least 20 raw candidates** before filtering, so Step 5's diversity rule has room to work.
 
 ## Step 3 — Score each candidate (0–100)
 
@@ -86,13 +86,13 @@ score = 0
 
 For each candidate, estimate distance + drive time to 500 Tyvola Rd. Use WebSearch with "distance from {ADDRESS} to 500 Tyvola Rd Charlotte" or general knowledge of Charlotte geography. Format: `8.2 mi / 18 min`. Discard anything > 12 miles.
 
-## Step 5 — Pick top 8 with source diversity
+## Step 5 — Pick top 10 with source diversity
 
-Pick up to **8 candidates** (fewer only if not enough qualify).
+Pick up to **10 candidates** (fewer only if not enough qualify).
 
 **Source diversity rules — enforce strictly:**
 - Maximum **3** listings from any single source domain (e.g., no more than 3 from `apartments.com`)
-- Minimum **3 distinct source domains** represented in the final 8
+- Minimum **4 distinct source domains** represented in the final 10
 - If after dedup + scoring you'd end up violating these rules, drop the lowest-scoring redundant entries and search again on under-represented sources (zumper, hotpads, zillow, trulia, rent.com, property-manager sites like camdenliving.com, greystar.com, bellpartnersinc.com, northwoodravin.com) until you can satisfy both rules
 
 Practical tactic: when searching in Step 2, allocate at least 2 search queries per source domain. Don't lean on apartments.com just because it ranks higher in Google — it dominates SEO and hides the rest of the market.
@@ -118,7 +118,7 @@ For each, build a row object:
 ```
 
 Field rules:
-- `ID`: `apt-YYYYMMDD-NN` where NN = 01..08 sequence
+- `ID`: `apt-YYYYMMDD-NN` where NN = 01..10 sequence
 - `DATE`: today YYYY-MM-DD (UTC)
 - `PRICE`: integer, no `$`, no commas
 - `BEDS`: `"studio"`, `"1"`, `"2"`
