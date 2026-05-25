@@ -131,7 +131,7 @@ If 0 candidates qualify, the `rows` array is `[]` — still send the digest so t
 
 Create exactly ONE Gmail draft using the `create_draft` tool.
 
-- **To:** `juan.diaz.rodriguez93@gmail.com`
+- **To:** `jpdiaz0@outlook.com`
 - **Subject:** `🏠 APTO-CLT daily — {N} new picks ({SOURCES_COUNT} sources) for {YYYY-MM-DD}` (the subject MUST start with `🏠 APTO-CLT daily —` for the Apps Script poller to find it)
 
 **Body format (exact structure — required for poller):**

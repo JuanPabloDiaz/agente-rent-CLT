@@ -27,7 +27,8 @@ trash icon next to that row).
 
 ## How it works
 
-- Agent runs daily, creates ONE Gmail draft.
+- Agent runs daily, creates ONE Gmail draft addressed to
+  `jpdiaz0@outlook.com` (Juan's review inbox).
 - Draft subject starts with `🏠 APTO-CLT daily —`.
 - Draft body contains a human-readable digest **and** a machine-readable JSON
   block delimited by:
@@ -42,9 +43,17 @@ trash icon next to that row).
   3. Skips drafts it already processed (tracked in `processed_drafts` script
      property by draft ID).
   4. Extracts JSON between the markers.
-  5. Filters out rows whose `ID` already exists in the Sheet.
+  5. Dedupes by LINK first, then normalized ADDRESS, against existing
+     Sheet rows.
   6. Appends remaining rows.
+  7. Sends the draft via `draft.send()` — the email lands in the recipient
+     inbox (Outlook). The draft disappears from Drafts.
 - Sync delay: up to ~1 hour. Run `runOnce` in the editor for immediate sync.
+
+**Why Apps Script sends instead of the agent:** the Anthropic Gmail MCP only
+exposes 5 tools (`create_draft`, `get_thread`, `list_drafts`, `list_labels`,
+`search_threads`) and does NOT include `send_email`. So the agent must
+finalize as a draft, and this script sends it on the agent's behalf.
 
 ## Manual utilities (run from the editor)
 

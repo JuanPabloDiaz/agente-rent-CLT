@@ -96,11 +96,23 @@ function pollGmailDrafts() {
       totalAppended += newRows.length;
     }
 
+    // Send the draft so the digest lands in the configured recipient's inbox
+    // (e.g. jpdiaz0@outlook.com). Apps Script's GmailDraft.send() honors the
+    // To/Subject/Body already set by the agent.
+    let sendStatus = 'sent';
+    try {
+      draft.send();
+    } catch (sendErr) {
+      console.warn('Failed to send draft ' + draftId + ': ' + sendErr);
+      sendStatus = 'send_failed: ' + String(sendErr).slice(0, 200);
+    }
+
     processed[draftId] = {
       processedAt: new Date().toISOString(),
       appended: newRows.length,
       totalInPayload: payload.rows.length,
-      date: payload.date || null
+      date: payload.date || null,
+      send: sendStatus
     };
   }
 
