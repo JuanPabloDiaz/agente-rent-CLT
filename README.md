@@ -2,4 +2,6 @@
 
 Vivo en Charlotte, Carolina del Norte y estoy viviendo en un apartamento en el sur de Charlotte, en una zona que se llama Ballantine. Mi Liz se acaba en septiembre y me gustaría buscar apartamento, mirar opciones y contemplar la mudanza. Donde estoy viviendo me encanta, me parece un muy buen lugar, una muy buena zona. Lo único que no me gusta es que es un poco costoso. Y me queda complicado ya que vivo solo. Entonces pago 1400 de renta. Y se me hace que es un poco un precio bastante alto. Digamos que ese es mi máximo que estoy buscando pagar. Me gustaría ver opciones dentro de Charlotte. O en sus alrededores por un precio menor. Y me gustaría entonces hacer un programita o algún agente o algo para que me ayude con esta tarea. Adjunto una imagen de un problema similar o de una situación similar en la que si se hace lo mismo, pero en la ciudad de San Francisco. Me gustaría modificarlo para mi situación actual de Charlotte. Y no sería en febrero, sino que sería en el mes de septiembre. El Liz sería de 12 meses. Y básicamente hazme preguntas de lo que necesites de todos los deal breakers y todo eso.
 
+<!-- 
 [GOOGLE SHEET](https://docs.google.com/spreadsheets/d/1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI/edit?usp=sharing)
+-->
