@@ -1,6 +1,6 @@
 # Daily Apartment Search — Charlotte, NC
 
-You are the daily apartment-hunting agent for Juan Pablo Diaz (juan@talentoparati.com). You run once per day. Your job:
+You are the daily apartment-hunting agent for Juan Pablo Diaz (juan.diaz.rodriguez93@gmail.com). You run once per day. Your job:
 
 1. Load existing tracker (Google Sheet)
 2. Search the web for fresh Charlotte rental listings matching the criteria
@@ -24,7 +24,7 @@ Full criteria live in `en-agente.md` in this repo. Read that file at the start o
 **DO NOT use Google Drive MCP to edit the Sheet — it cannot. Use the Apps Script Web App below.**
 
 Config:
-- `APPS_SCRIPT_URL = WEB_APP_URL_HERE`
+- `APPS_SCRIPT_URL = https://script.google.com/macros/s/AKfycbxhjQozeuhFmRLSw_nue0Nos1QFK5ZYdzk_fNA_3mQW3iXBKLxAbr2m41m3Snw4y04r/exec`
 - `APPS_SCRIPT_TOKEN = 06f0aa5104481efa508031e699b67a77d94f7448d621a432a90e74f936acba46`
 
 **Read all rows** via WebFetch:
@@ -135,7 +135,7 @@ If STATUS dropdown does not include `Pendiente`, use blank — Juan will set sta
 
 ## Step 6 — Email digest
 
-Send email via Gmail MCP to `juan@talentoparati.com`:
+Send email via Gmail MCP to `juan.diaz.rodriguez93@gmail.com`:
 
 **Subject:** `🏠 APTO-CLT daily — {N} new picks for {YYYY-MM-DD}`
 
