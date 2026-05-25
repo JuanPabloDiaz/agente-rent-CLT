@@ -19,22 +19,25 @@ Full criteria live in `en-agente.md` in this repo. Read that file at the start o
 - Preferred neighborhoods (ranked): Ballantyne, Steele Creek, Berewick, Piper Glen, Stonecrest, Pineville, Tyvola/Yorkmount, South Charlotte, Matthews, Mint Hill
 - Avoid: Uptown, University area, NoDa, Plaza Midwood, West Charlotte beyond Steele Creek
 
-## Step 1 — Read the Sheet
+## Step 1 — Read the Sheet (via Apps Script Web App)
 
-**CRITICAL: There is ONE existing Sheet you must read AND write to. DO NOT create a new spreadsheet under any circumstance. If you cannot find or write to the existing sheet, abort with an error — do not silently fall back to creating a new one.**
+**DO NOT use Google Drive MCP to edit the Sheet — it cannot. Use the Apps Script Web App below.**
 
-Target Sheet:
-- **Name:** `APTO-CLT Tracker`
-- **ID:** `1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI`
-- **Full URL:** https://docs.google.com/spreadsheets/d/1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI/edit
-- **Owner:** juan@talentoparati.com (the same Google account authenticated via the Drive MCP)
+Config:
+- `APPS_SCRIPT_URL = WEB_APP_URL_HERE`
+- `APPS_SCRIPT_TOKEN = 06f0aa5104481efa508031e699b67a77d94f7448d621a432a90e74f936acba46`
 
-Use the Google Drive MCP to:
-1. Search for the file by ID `1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI` OR by name `APTO-CLT Tracker`.
-2. Open it.
-3. Read all existing rows from the first sheet/tab (default tab, columns A:M).
+**Read all rows** via WebFetch:
+```
+GET {APPS_SCRIPT_URL}?action=read&token={APPS_SCRIPT_TOKEN}
+```
 
-If the search returns no file, do NOT create one. Instead, write an error note to the Gmail draft saying "Could not access APTO-CLT Tracker sheet — verify Drive MCP permissions" and stop.
+Expected response shape:
+```json
+{"status":200,"body":{"headers":["ID","DATE",...],"rows":[{...},{...}]}}
+```
+
+If `status != 200` or the request fails, abort the run, create a Gmail draft titled `🚨 APTO-CLT daily — sheet read failed YYYY-MM-DD`, paste the error response in the body, and stop. Do not proceed with writing anything.
 
 After loading rows, build two sets:
 - `seen_links` — every value in the LINK column (use for dedup)
@@ -91,11 +94,26 @@ For each candidate, estimate distance + drive time to 500 Tyvola Rd. Use WebSear
 
 Discard anything > 12 miles.
 
-## Step 5 — Write new rows
+## Step 5 — Write new rows (via Apps Script Web App)
 
-**Append rows to the SAME existing sheet you read in Step 1 (`APTO-CLT Tracker`, ID `1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI`). Never create a new spreadsheet.**
+**POST to the Apps Script Web App. NEVER create a new Sheet via Drive MCP.**
 
-Pick top 5 candidates by score (or fewer if not enough qualify). For each, append a row to the existing sheet (after the last existing row):
+```
+POST {APPS_SCRIPT_URL}
+Content-Type: application/json
+
+{
+  "token": "{APPS_SCRIPT_TOKEN}",
+  "rows": [
+    {"ID":"apt-YYYYMMDD-01","DATE":"YYYY-MM-DD","NAME":"...","ADDRESS":"...","PRICE":1350,"BEDS":"1","SQF":"720","LINK":"https://...","DISTANCE APROX":"8.2 mi / 18 min","SCORE":78,"STATUS":"","NOTES":"...","SOURCE":"zillow"},
+    ...
+  ]
+}
+```
+
+Expected success response: `{"status":200,"body":{"appended_count":N,"total_rows":M}}`
+
+Pick top 5 candidates by score (or fewer if not enough qualify) and submit them all in a single POST.
 
 | Column | Value |
 |---|---|
