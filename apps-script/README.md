@@ -1,53 +1,61 @@
-# Apps Script Web App — Setup
+# Apps Script — GitHub → Sheet bridge
 
-This bridges the agent to the Google Sheet because the official Google Drive MCP cannot edit existing Sheets (only read + create new files).
+The daily Claude agent cannot reach `script.google.com` from its sandbox, so it
+writes JSON files to `data/inbox/YYYY-MM-DD.json` in this repo instead. This
+Apps Script polls the repo on a time trigger and syncs new rows into the Sheet.
 
-## One-time install
+## One-time setup
 
-1. Open https://docs.google.com/spreadsheets/d/1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI/edit
-2. **Extensions → Apps Script**
-3. Replace whatever is in `Code.gs` with the contents of [`Code.gs`](./Code.gs) in this folder
-4. **Save** (Ctrl/Cmd+S)
-5. **Deploy → New deployment**
-   - **Type:** Web app
-   - **Execute as:** Me (juan@talentoparati.com)
-   - **Who has access:** Anyone
-6. Click **Deploy**, authorize when prompted
-7. Copy the **Web app URL** — looks like `https://script.google.com/macros/s/AKfycb.../exec`
-8. Paste that URL into `daily-prompt.md` (replace `WEB_APP_URL_HERE`)
-9. Commit + push
+1. Open Apps Script editor (https://script.google.com) on the personal Gmail
+   account that owns the Sheet (`juan.diaz.rodriguez93@gmail.com`).
+2. Open your project `apto-clt-bridge` (or create a new one if starting over).
+3. Replace all code in `Code.gs` with the contents of [`Code.gs`](./Code.gs).
+4. Save (Cmd+S).
+5. In the left sidebar click **Triggers** (clock icon) → **Add Trigger**:
+   - Function: `pollGitHub`
+   - Event source: **Time-driven**
+   - Type: **Hour timer**
+   - Interval: **Every hour**
+6. Save. Authorize when prompted (Sheets + external requests).
+7. Optional sanity check: from the editor select `pollGitHub` in the dropdown
+   at the top and click **Run**. Watch the Executions log for "appended N rows".
 
-## Test from terminal
+## How it works
 
-```bash
-URL="https://script.google.com/macros/s/AKfycb.../exec"
-TOKEN="06f0aa5104481efa508031e699b67a77d94f7448d621a432a90e74f936acba46"
+- Agent commits `data/inbox/YYYY-MM-DD.json` (array of row objects).
+- Apps Script `pollGitHub()` runs hourly:
+  1. Lists files in `data/inbox/` via GitHub Contents API.
+  2. Skips files it already processed (tracked in `processed_files` script
+     property, keyed by path + sha so edits re-process automatically).
+  3. Fetches each new file's raw JSON.
+  4. Filters out rows whose `ID` already exists in the Sheet.
+  5. Appends remaining rows.
+- Sync delay: up to ~1 hour. Run `pollGitHub` manually in the editor anytime
+  for immediate sync.
 
-# Read
-curl -sL "$URL?action=read&token=$TOKEN"
+## Manual utilities (from the editor)
 
-# Write (test row)
-curl -sL -X POST "$URL" \
-  -H "Content-Type: application/json" \
-  -d "{\"token\":\"$TOKEN\",\"rows\":[{\"ID\":\"test-001\",\"DATE\":\"2026-05-25\",\"NAME\":\"Test Building\",\"PRICE\":1200,\"STATUS\":\"Maybe\"}]}"
-```
+- `pollGitHub()` — run a sync immediately
+- `resetProcessedFiles()` — clear the processed-files cache; next poll
+  re-scans everything (safe — `appendRows` still dedupes by ID)
 
-If the test row appears in row 2 of your sheet, you're good.
+## Web App (kept for completeness)
 
-## Security note
+The Web App deployment is still active. It's no longer used by the daily agent
+because the sandbox can't reach `script.google.com`. Endpoints:
 
-The token is in `SECRET_TOKEN` in `Code.gs`. If you ever rotate it, update both:
-- `apps-script/Code.gs`
-- `daily-prompt.md` (the `APPS_SCRIPT_TOKEN` value)
+- `GET ?action=read&token=...` — return all rows as JSON (used by the agent's
+  optional learning step if the sandbox happens to reach Google scripts)
+- `POST` — manual emergency writes; not in the daily flow
 
-Anyone with the URL + token can append to your sheet. Don't post the URL+token publicly.
+URL: `https://script.google.com/macros/s/AKfycbxhjQozeuhFmRLSw_nue0Nos1QFK5ZYdzk_fNA_3mQW3iXBKLxAbr2m41m3Snw4y04r/exec`
 
-## Why this exists
+## Security
 
-Google Drive MCP available tools (May 2026):
-- Read-only: `download_file_content`, `get_file_metadata`, `get_file_permissions`, `list_recent_files`, `read_file_content`, `search_files`
-- Write/delete: `copy_file`, `create_file`
+The script runs as you and accesses your Sheet by ID. The Web App URL is
+public; the `SECRET_TOKEN` gates `GET ?action=read` and `POST`. The polling
+flow doesn't use the token — it reads from the public GitHub repo directly.
 
-Notably absent: `append_row`, `update_cell`, `update_sheet`. Without those, the agent could only create a new Sheet each day (which it did, hence this fix).
-
-Apps Script Web App gives us full Sheets API access via HTTP, callable from `WebFetch` in any agent.
+If the repo ever goes private, `UrlFetchApp.fetch` in `listInboxFiles` will
+need an `Authorization: token <PAT>` header. Add a script property
+`GITHUB_PAT` and read it via `PropertiesService.getScriptProperties()`.
