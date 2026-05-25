@@ -34,26 +34,37 @@ If no prior threads found, both sets stay empty (first-run case).
 
 Skip any prior thread that doesn't parse cleanly — log it in NOTES of today's digest but don't abort.
 
-## Step 2 — Search
+## Step 2 — Search (broad, source-diverse)
 
-Use WebSearch + WebFetch to find current listings on:
-- zillow.com/charlotte-nc/rentals
-- apartments.com/charlotte-nc
-- zumper.com/apartments-for-rent/charlotte-nc
-- hotpads.com/charlotte-nc/apartments-for-rent
-- rent.com/north-carolina/charlotte-apartments
-- trulia.com/for_rent/Charlotte,NC
+Cast a wide net. Issue **at least 2 search queries per source domain** to avoid letting one site dominate. The agent's WebSearch tends to favor apartments.com — counteract that by using `site:` filters explicitly.
 
-Search query examples:
-- "1 bedroom apartment Ballantyne Charlotte NC under 1400"
-- "Steele Creek apartments Charlotte rent September 2026"
-- "Pineville NC studio apartment in unit laundry"
+Source domains (run targeted queries against each):
+- `site:zillow.com` Charlotte NC rentals
+- `site:apartments.com` Charlotte NC 1 bedroom
+- `site:zumper.com` Charlotte NC apartments
+- `site:hotpads.com` Charlotte NC apartments for rent
+- `site:trulia.com` Charlotte NC for rent
+- `site:rent.com` Charlotte NC apartments
+- `site:realtor.com` Charlotte NC rentals
+- Major property-manager sites (no `site:`): `camdenliving.com Charlotte`, `greystar.com Charlotte`, `bellpartnersinc.com Charlotte`, `northwoodravin.com Charlotte`, `mfaresidential.com Charlotte`
+
+Suggested query mix (8–12 total searches per run):
+- `site:zumper.com 1 bedroom Steele Creek Charlotte NC under 1400`
+- `site:hotpads.com Ballantyne Charlotte apartment 1BR`
+- `site:zillow.com Pineville NC apartment for rent`
+- `site:trulia.com Charlotte Tyvola 1 bedroom`
+- `site:rent.com Matthews NC apartment`
+- `camdenliving.com Charlotte 1 bedroom`
+- `greystar.com Charlotte Steele Creek`
+- `site:apartments.com Berewick Charlotte NC` (capped — see Step 5 diversity rule)
 
 Only collect listings that:
 - Have a direct URL to the specific listing (not a search page)
 - Price is at or under $1,500 (slight buffer above $1,400 ceiling for review)
 - Are in or near preferred neighborhoods (not in avoid list)
 - Are not in `seen_links` or `seen_addresses`
+
+Collect **at least 15 raw candidates** before filtering, so Step 5's diversity rule has room to work.
 
 ## Step 3 — Score each candidate (0–100)
 
@@ -75,9 +86,18 @@ score = 0
 
 For each candidate, estimate distance + drive time to 500 Tyvola Rd. Use WebSearch with "distance from {ADDRESS} to 500 Tyvola Rd Charlotte" or general knowledge of Charlotte geography. Format: `8.2 mi / 18 min`. Discard anything > 12 miles.
 
-## Step 5 — Pick top 5
+## Step 5 — Pick top 8 with source diversity
 
-Pick top 5 candidates by score (or fewer if not enough qualify). For each, build a row object:
+Pick up to **8 candidates** (fewer only if not enough qualify).
+
+**Source diversity rules — enforce strictly:**
+- Maximum **3** listings from any single source domain (e.g., no more than 3 from `apartments.com`)
+- Minimum **3 distinct source domains** represented in the final 8
+- If after dedup + scoring you'd end up violating these rules, drop the lowest-scoring redundant entries and search again on under-represented sources (zumper, hotpads, zillow, trulia, rent.com, property-manager sites like camdenliving.com, greystar.com, bellpartnersinc.com, northwoodravin.com) until you can satisfy both rules
+
+Practical tactic: when searching in Step 2, allocate at least 2 search queries per source domain. Don't lean on apartments.com just because it ranks higher in Google — it dominates SEO and hides the rest of the market.
+
+For each, build a row object:
 
 ```json
 {
@@ -98,7 +118,7 @@ Pick top 5 candidates by score (or fewer if not enough qualify). For each, build
 ```
 
 Field rules:
-- `ID`: `apt-YYYYMMDD-NN` where NN = 01..05 sequence
+- `ID`: `apt-YYYYMMDD-NN` where NN = 01..08 sequence
 - `DATE`: today YYYY-MM-DD (UTC)
 - `PRICE`: integer, no `$`, no commas
 - `BEDS`: `"studio"`, `"1"`, `"2"`
@@ -112,7 +132,7 @@ If 0 candidates qualify, the `rows` array is `[]` — still send the digest so t
 Create exactly ONE Gmail draft using the `create_draft` tool.
 
 - **To:** `juan.diaz.rodriguez93@gmail.com`
-- **Subject:** `🏠 APTO-CLT daily — {N} new picks for {YYYY-MM-DD}` (the subject MUST start with `🏠 APTO-CLT daily —` for the Apps Script poller to find it)
+- **Subject:** `🏠 APTO-CLT daily — {N} new picks ({SOURCES_COUNT} sources) for {YYYY-MM-DD}` (the subject MUST start with `🏠 APTO-CLT daily —` for the Apps Script poller to find it)
 
 **Body format (exact structure — required for poller):**
 
