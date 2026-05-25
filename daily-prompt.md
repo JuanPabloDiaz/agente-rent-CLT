@@ -113,6 +113,12 @@ Content-Type: application/json
 
 Expected success response: `{"status":200,"body":{"appended_count":N,"total_rows":M}}`
 
+**Important quirk:** Apps Script Web Apps sometimes return a misleading HTML "Page Not Found" page after POST even when the write succeeded. Do NOT trust the POST response body. Instead, verify success by:
+1. Note the row count from Step 1 read (`rows_before`).
+2. POST your new rows.
+3. GET `?action=read` again. Confirm `rows_after - rows_before == number you POSTed`.
+4. If counts match → success. If not → retry POST once. If still mismatch → log error to Gmail draft and stop.
+
 Pick top 5 candidates by score (or fewer if not enough qualify) and submit them all in a single POST.
 
 | Column | Value |
