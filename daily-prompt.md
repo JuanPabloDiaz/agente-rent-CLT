@@ -136,17 +136,26 @@ Create exactly ONE Gmail draft using the `create_draft` tool.
 
 **Body format (exact structure — required for poller):**
 
+**CRITICAL: list ALL {N} picks in the body, numbered 1 through N. Do not stop at 5 or truncate. If N=10, the body must contain 10 numbered entries before the "Resumen mercado" line.**
+
 ```
 Buenos días Juan,
 
-Encontré {N} apartamentos nuevos hoy. Top picks:
+Encontré {N} apartamentos nuevos hoy. Top picks (listados completos abajo):
 
 1. {NAME} — ${PRICE}/mo — {NEIGHBORHOOD} — score {SCORE}
    {DISTANCE} | {BEDS}BR | {SOURCE}
    {LINK}
    Why: {1-line summary}
 
-2. ...
+2. {NAME} — ${PRICE}/mo — {NEIGHBORHOOD} — score {SCORE}
+   {DISTANCE} | {BEDS}BR | {SOURCE}
+   {LINK}
+   Why: {1-line summary}
+
+3. ... (continue this exact pattern for every single one of the N picks — no skipping, no "...")
+
+{N}. {final pick}
 
 Resumen mercado (si aplica): {1-2 sentences sobre tendencias vistas hoy}
 
