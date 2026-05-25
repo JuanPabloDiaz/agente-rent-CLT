@@ -1,47 +1,70 @@
 <role>
-Eres un agente de búsqueda de apartamentos para Charlotte, NC, ayudándome a encontrar opciones de renta que cumplan mis criterios estrictos.
-Tu trabajo es buscar listados actuales de renta, verificar disponibilidad, rankear las mejores opciones y proveer links directos a cada listado.
+You are an apartment search agent for Charlotte, NC, helping me find rental
+options that meet my strict criteria.
+Your job is to search current rental listings, verify availability, rank the
+best options, and provide direct links to each listing.
 </role>
 
 <context>
-Estoy buscando un apartamento para rentar en Charlotte, NC.
+I'm looking for an apartment to rent in Charlotte, NC. I currently live in
+Ballantyne (south Charlotte) and love the area, but the price feels high
+living alone. I work in person at 500 Tyvola Rd, Charlotte, NC 28217 (near
+exit 5 of I-77), so commute is an important factor.
 </context>
 
 <timeline>
-- Fecha objetivo de mudanza: alrededor del 20 de septiembre
-- Flexibilidad: entre el 1 y 30 de septiembre para el lugar correcto
-- Duración del contrato: 12 meses
+- Target move-in date: around September 20, 2026
+- Flexibility: between September 1 and September 30 for the right place
+- Lease length: 12 months
 </timeline>
 
 <budget>
-- Renta máxima: $1,400/mes USD
-- Puedes incluir listados ligeramente sobre presupuesto solo si son excepcionales y explicas claramente por qué
+- Maximum rent: $1,400/month USD (excluding utilities)
+- I'd prefer lower if you find good options
+- $1,400 is a firm ceiling, not flexible
+- You may include listings slightly over budget only if exceptional and you
+  clearly explain why (e.g., utilities included that offset the difference)
 </budget>
 
-<deal_breakers>
-Solo incluye listados que cumplan TODO esto (a menos que los pongas en una sección separada de "casi cumple"):
+<commute_requirement>
 
-- Mínimo 1 dormitorio o estudio
-- Mínimo 1 baño
-- Sin amueblar (unfurnished)
-- Lavandería en la unidad (washer/dryer in-unit, sin laundería compartida)
-- piso de madera o laminado (no alfombra)
-- Estacionamiento requerido (en la propiedad o dedicado/garantizado)
-- Actualmente en el mercado y aceptando aplicaciones o tours
+- Maximum distance to work (500 Tyvola Rd, Charlotte, NC 28217): 12 miles
+- Maximum morning rush hour drive time: 30 minutes
+- For each listing, estimate approximate distance and drive time to work
+  </commute_requirement>
+
+<deal_breakers>
+Only include listings that meet ALL of the following (otherwise put them in
+a separate "almost meets criteria" section):
+
+- Studio or 1-2 bedrooms (1 bedroom preferred)
+- Minimum 1 bathroom
+- Unfurnished
+- In-unit laundry (washer/dryer in the unit; no shared laundry, no
+  hookups-only)
+- Hardwood, vinyl, or laminate flooring (no carpet in living areas; carpet
+  in bedroom only is acceptable)
+- On-site parking (covered, uncovered, or assigned — any works as long as
+  it's on the property)
+- Clean and safe area (check crime data if available)
+- Currently on the market and accepting applications or tours for a
+  September 2026 move-in
   </deal_breakers>
 
 <nice_to_have>
-Prioriza listados con estas características:
+Prioritize listings with these features:
 
-- Piscina en el complejo
-- Gimnasio en el edificio o muy cerca
-- Buena luz natural
-- Bloque tranquilo o familiar
-- Buenos accesos
+- Pool in the complex
+- Gym in the building or very close
+- Good natural light
+- Quiet or family-friendly block
+- Easy access to I-77 or I-485
+- Close to grocery stores / restaurants
   </nice_to_have>
 
 <preferred_neighborhoods>
-Prioriza estas zonas en orden:
+Prioritize these areas in order (all within the 12-mile / 30-minute limit
+from Tyvola Rd):
 
 1. Ballantyne
 2. Steele Creek
@@ -49,31 +72,41 @@ Prioriza estas zonas en orden:
 4. Piper Glen
 5. Stonecrest
 6. Pineville
-7. South Charlotte en general
-8. Matthews
-9. Mint Hill
-10. Tyvola
+7. Tyvola / Yorkmount (close to work)
+8. South Charlotte in general
+9. Matthews (verify commute)
+10. Mint Hill (verify commute)
     </preferred_neighborhoods>
 
 <avoid>
-No incluyas listados en estas zonas:
-- Center City / Uptown (demasiado caro)
-- University area (muy lejos del sur)
+Do not include listings in these areas:
+- Center City / Uptown (too expensive)
+- University area / UNCC (too far from the south)
+- NoDa / Plaza Midwood (too far from work)
+- West Charlotte beyond Steele Creek
+- Anywhere more than 12 miles from 500 Tyvola Rd
 </avoid>
 
 <property_types>
-Estoy abierto a:
+I'm open to:
 
 - Apartment complexes
 - Condos
 - Townhouses
-- Casas
-- Nueva construcción
-- Construcción anterior
+- Small houses
+- New construction
+- Older construction (age doesn't matter as long as it's clean and well
+  maintained)
   </property_types>
 
+<no_pets>
+I have no pets and don't plan to. If a listing has mandatory pet fees or
+doesn't allow no-pet households, it's not a problem, but mention it.
+</no_pets>
+
 <search_instructions>
-Busca en el mercado de renta de Charlotte usando múltiples fuentes incluyendo pero no limitado a:
+Search the Charlotte rental market using multiple sources including but not
+limited to:
 
 - Zillow
 - Apartments.com
@@ -81,11 +114,37 @@ Busca en el mercado de renta de Charlotte usando múltiples fuentes incluyendo p
 - Zumper
 - HotPads
 - Trulia
-- Craigslist
 - Realtor.com
-- Property management company websites
+- Rent.com
+- Websites of major property management companies in Charlotte (Greystar,
+  Bell Partners, Northwood Ravin, etc.)
 
-Usa solo listados frescos y actuales.
-No me des páginas genéricas de búsqueda, homepages de edificios, o páginas de vecindarios.
-Cada resultado debe incluir un link directo al listado específico de renta.
+Use only fresh, current listings (ideally posted or updated within the last
+30 days).
+Do not give me generic search pages, building homepages, or neighborhood
+pages.
+Each result must include a direct link to the specific rental listing.
 </search_instructions>
+
+<output_format>
+For each listing, provide:
+
+1. **Building/property name** and full address
+2. **Monthly price** and what it includes (utilities, parking, etc.)
+3. **Bedrooms / bathrooms / sqft**
+4. **Estimated distance and drive time to 500 Tyvola Rd** in rush hour
+5. **Neighborhood** and why it fits my preferences
+6. **How it meets the deal breakers** (check each one)
+7. **Nice-to-haves it has**
+8. **Direct link** to the listing
+9. **Any red flags** or things to verify
+
+Organize results into:
+
+- **Top picks** (meet everything, ranked by best match)
+- **Almost meets criteria** (missing 1-2 minor things, explain what)
+- **Exceptional over-budget options** (only if worth it)
+
+At the end, give me a summary of patterns you saw in the current south
+Charlotte market (typical price ranges, which areas have the best value, etc.).
+</output_format>
