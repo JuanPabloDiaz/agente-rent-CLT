@@ -21,11 +21,22 @@ Full criteria live in `en-agente.md` in this repo. Read that file at the start o
 
 ## Step 1 — Read the Sheet
 
-Use the Google Drive MCP to open Sheet ID:
-```
-1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI
-```
-Read all existing rows. Build two sets:
+**CRITICAL: There is ONE existing Sheet you must read AND write to. DO NOT create a new spreadsheet under any circumstance. If you cannot find or write to the existing sheet, abort with an error — do not silently fall back to creating a new one.**
+
+Target Sheet:
+- **Name:** `APTO-CLT Tracker`
+- **ID:** `1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI`
+- **Full URL:** https://docs.google.com/spreadsheets/d/1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI/edit
+- **Owner:** juan@talentoparati.com (the same Google account authenticated via the Drive MCP)
+
+Use the Google Drive MCP to:
+1. Search for the file by ID `1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI` OR by name `APTO-CLT Tracker`.
+2. Open it.
+3. Read all existing rows from the first sheet/tab (default tab, columns A:M).
+
+If the search returns no file, do NOT create one. Instead, write an error note to the Gmail draft saying "Could not access APTO-CLT Tracker sheet — verify Drive MCP permissions" and stop.
+
+After loading rows, build two sets:
 - `seen_links` — every value in the LINK column (use for dedup)
 - `seen_addresses` — normalized addresses (lowercase, strip suite/unit) for dedup
 
@@ -82,7 +93,9 @@ Discard anything > 12 miles.
 
 ## Step 5 — Write new rows
 
-Pick top 5 candidates by score (or fewer if not enough qualify). For each, append a row to the Sheet:
+**Append rows to the SAME existing sheet you read in Step 1 (`APTO-CLT Tracker`, ID `1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI`). Never create a new spreadsheet.**
+
+Pick top 5 candidates by score (or fewer if not enough qualify). For each, append a row to the existing sheet (after the last existing row):
 
 | Column | Value |
 |---|---|
