@@ -6,6 +6,7 @@
 
 // IMPORTANT: change SECRET_TOKEN to a random string. Add the same string to the agent prompt.
 const SECRET_TOKEN = '06f0aa5104481efa508031e699b67a77d94f7448d621a432a90e74f936acba46';
+const SHEET_ID = '1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI';
 
 const HEADERS = [
   'ID', 'DATE', 'NAME', 'ADDRESS', 'PRICE', 'BEDS', 'SQF', 'LINK',
@@ -51,7 +52,7 @@ function doPost(e) {
 }
 
 function readAllRows() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) {
     return { headers: HEADERS, rows: [] };
@@ -67,7 +68,7 @@ function readAllRows() {
 }
 
 function appendRows(rows) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
   const matrix = rows.map(r => HEADERS.map(h => (r[h] !== undefined ? r[h] : '')));
   if (matrix.length === 0) return 0;
   const startRow = sheet.getLastRow() + 1;
@@ -76,7 +77,7 @@ function appendRows(rows) {
 }
 
 function getRowCount() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
   return Math.max(0, sheet.getLastRow() - 1);
 }
 
