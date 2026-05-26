@@ -169,7 +169,7 @@ Encontré {N} casas/condos nuevos hoy. Top picks (listados completos abajo):
 Resumen mercado (si aplica): {1-2 sentences sobre tendencias de price-per-sqft, DOM, inventario}
 
 Las filas aparecerán automáticamente en el Sheet cuando Apps Script sincronice (dentro de 1h):
-<TODO: paste casa-clt Sheet URL once the Sheet exists>
+https://docs.google.com/spreadsheets/d/1nVwG09Y9vK3BVTd9XyvLzPILqFBA5ykZdMDgxAKTTss/edit
 
 ---
 CASA-CLT machine-readable payload (do not edit — used by sync poller):

@@ -42,7 +42,7 @@ const AGENTS = [
   },
   {
     name: 'casa-clt',
-    sheetId: '<TODO-USER-FILLS-IN>',
+    sheetId: '1nVwG09Y9vK3BVTd9XyvLzPILqFBA5ykZdMDgxAKTTss',
     subjectPrefix: '🏡 CASA-CLT daily',
     dataStart: '<<<CASA-CLT-DATA-START>>>',
     dataEnd: '<<<CASA-CLT-DATA-END>>>',

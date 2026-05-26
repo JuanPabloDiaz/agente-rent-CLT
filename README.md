@@ -50,17 +50,14 @@ Daily agent that searches for houses, townhouses, and condos to buy in Charlotte
 - **Files:**
   - [`agents/casa-clt/daily-prompt.md`](./agents/casa-clt/daily-prompt.md) — operational prompt
   - [`agents/casa-clt/en-agente.md`](./agents/casa-clt/en-agente.md) — full criteria, contains `TODO:` placeholders for budget, down payment, PITI cap, year-built floor, HOA ceiling, property type ranking
-- **Sheet:** TODO — create the Sheet, paste headers (see daily-prompt.md "Sheet column schema"), then paste the Sheet ID into `apps-script/Code.gs` `AGENTS[1].sheetId`
+- **Sheet:** [casa-clt](https://docs.google.com/spreadsheets/d/1nVwG09Y9vK3BVTd9XyvLzPILqFBA5ykZdMDgxAKTTss/edit?usp=sharing) — make sure row 1 has the headers listed in `daily-prompt.md` "Sheet column schema" (at minimum, a `LINK` column is required for dedup)
 - **Subject prefix:** `🏡 CASA-CLT daily —`
 - **Data markers:** `<<<CASA-CLT-DATA-START>>>` / `<<<CASA-CLT-DATA-END>>>`
 
-**Before this agent produces useful output, the user must:**
+**Before this agent produces useful output, the user must still:**
 1. Fill in every `TODO:` marker in `agents/casa-clt/en-agente.md` (purchase budget, down payment, max PITI, min beds/baths/sqft, year-built floor, HOA ceiling, property type ranking)
-2. Create the casa-clt Google Sheet with the proposed column headers
-3. Paste the Sheet ID into `AGENTS[1].sheetId` in `apps-script/Code.gs`
-4. Paste the Sheet URL into the body template in `agents/casa-clt/daily-prompt.md`
-
-Until step 3 is done, the Apps Script bridge skips casa-clt and logs a "sheetId is TODO" warning. apto-clt is unaffected.
+2. Make sure the casa-clt Google Sheet has the column headers from `daily-prompt.md` "Sheet column schema" in row 1 (the poller reads them dynamically; `LINK` is the only required column)
+3. Paste the updated `apps-script/Code.gs` into the Apps Script editor and save
 
 ## Shared architecture
 
