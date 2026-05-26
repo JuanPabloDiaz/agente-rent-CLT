@@ -8,8 +8,9 @@ best options, and provide direct links to each listing.
 <context>
 I'm looking for an apartment to rent in Charlotte, NC. I currently live in
 Ballantyne (south Charlotte) and love the area, but the price feels high
-living alone. I work in person at 500 Tyvola Rd, Charlotte, NC 28217 (near
-exit 5 of I-77), so commute is an important factor.
+living alone. See [`shared/charlotte-context.md`](../../shared/charlotte-context.md)
+for work address, commute envelope, preferred neighborhoods, and avoid list
+— those apply here.
 </context>
 
 <timeline>
@@ -27,11 +28,10 @@ exit 5 of I-77), so commute is an important factor.
 </budget>
 
 <commute_requirement>
-
-- Maximum distance to work (500 Tyvola Rd, Charlotte, NC 28217): 12 miles
-- Maximum morning rush hour drive time: 30 minutes
-- For each listing, estimate approximate distance and drive time to work
-  </commute_requirement>
+See [`shared/charlotte-context.md`](../../shared/charlotte-context.md) for
+distance and drive-time limits. For each listing, estimate driving distance
+and rush-hour drive time to the work address.
+</commute_requirement>
 
 <deal_breakers>
 Only include listings that meet ALL of the following (otherwise put them in
@@ -63,28 +63,13 @@ Prioritize listings with these features:
   </nice_to_have>
 
 <preferred_neighborhoods>
-Prioritize these areas in order (all within the 12-mile / 30-minute limit
-from Tyvola Rd):
-
-1. Ballantyne
-2. Steele Creek
-3. Berewick
-4. Piper Glen
-5. Stonecrest
-6. Pineville
-7. Tyvola / Yorkmount (close to work)
-8. South Charlotte in general
-9. Matthews (verify commute)
-10. Mint Hill (verify commute)
-    </preferred_neighborhoods>
+See [`shared/charlotte-context.md`](../../shared/charlotte-context.md) —
+the ranked list there applies to apartment hunting.
+</preferred_neighborhoods>
 
 <avoid>
-Do not include listings in these areas:
-- Center City / Uptown (too expensive)
-- University area / UNCC (too far from the south)
-- NoDa / Plaza Midwood (too far from work)
-- West Charlotte beyond Steele Creek
-- Anywhere more than 12 miles from 500 Tyvola Rd
+See [`shared/charlotte-context.md`](../../shared/charlotte-context.md) for
+the global avoid list. No apartment-specific additions.
 </avoid>
 
 <property_types>

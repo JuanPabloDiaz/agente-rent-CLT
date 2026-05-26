@@ -8,8 +8,9 @@ rankear las mejores opciones y proveer links directos a cada listado.
 <context>
 Estoy buscando un apartamento para rentar en Charlotte, NC. Actualmente vivo 
 en Ballantyne (sur de Charlotte) y me encanta la zona, pero el precio se me 
-hace alto viviendo solo. Trabajo en persona en 500 Tyvola Rd, Charlotte, NC 
-28217 (cerca del exit 5 de la I-77), así que el commute es un factor importante.
+hace alto viviendo solo. Ver [`shared/charlotte-context.md`](../../shared/charlotte-context.md)
+para dirección del trabajo, commute, vecindarios preferidos y avoid list —
+todo eso aplica acá.
 </context>
 
 <timeline>
@@ -28,12 +29,10 @@ hace alto viviendo solo. Trabajo en persona en 500 Tyvola Rd, Charlotte, NC
 </budget>
 
 <commute_requirement>
-
-- Distancia máxima al trabajo (500 Tyvola Rd, Charlotte, NC 28217): 12 millas
-- Tiempo máximo de manejo en hora pico (mañana): 30 minutos
-- Para cada listado, estima la distancia y tiempo de manejo aproximado al
-  trabajo
-  </commute_requirement>
+Ver [`shared/charlotte-context.md`](../../shared/charlotte-context.md) para
+límites de distancia y tiempo. Para cada listado, estima distancia y tiempo
+en hora pico al trabajo.
+</commute_requirement>
 
 <deal_breakers>
 Solo incluye listados que cumplan TODO esto (a menos que los pongas en una
@@ -65,28 +64,13 @@ Prioriza listados con estas características:
   </nice_to_have>
 
 <preferred_neighborhoods>
-Prioriza estas zonas en orden (todas dentro del límite de 12 millas / 30 min
-de Tyvola Rd):
-
-1. Ballantyne
-2. Steele Creek
-3. Berewick
-4. Piper Glen
-5. Stonecrest
-6. Pineville
-7. Tyvola / Yorkmount (cerca del trabajo)
-8. South Charlotte en general
-9. Matthews (verificar commute)
-10. Mint Hill (verificar commute)
-    </preferred_neighborhoods>
+Ver [`shared/charlotte-context.md`](../../shared/charlotte-context.md) — la
+lista ranked aplica para apartamentos.
+</preferred_neighborhoods>
 
 <avoid>
-No incluyas listados en estas zonas:
-- Center City / Uptown (demasiado caro)
-- University area / UNCC (muy lejos del sur)
-- NoDa / Plaza Midwood (muy lejos del trabajo)
-- West Charlotte más allá de Steele Creek
-- Cualquier zona a más de 12 millas de 500 Tyvola Rd
+Ver [`shared/charlotte-context.md`](../../shared/charlotte-context.md) para
+el avoid list global. Sin adiciones específicas para apartamento.
 </avoid>
 
 <property_types>

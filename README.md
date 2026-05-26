@@ -4,6 +4,28 @@ Repository of automated agents for real estate search in Charlotte, NC. Each age
 
 Context: I live in Ballantyne (south Charlotte) and work at 500 Tyvola Rd. I want to monitor the market both for my next rental (move-in September 2026) and for an eventual home purchase.
 
+## Layout
+
+```
+agents/
+  apto-clt/                  apartment-to-rent agent
+    daily-prompt.md
+    en-agente.md
+    es-agente.md
+  casa-clt/                  house/condo-to-buy agent (skeleton)
+    daily-prompt.md
+    en-agente.md
+shared/
+  charlotte-context.md       work address, neighborhoods, commute envelope, avoid list
+apps-script/
+  Code.gs                    Gmail-draft -> Sheet bridge, parameterized for both agents
+  README.md
+data/inbox/
+  apto-clt/                  per-agent local staging / debug logs
+  casa-clt/
+README.md
+```
+
 ## Agents
 
 ### 1. Apartment to rent — `apto-clt` (active)
@@ -11,34 +33,34 @@ Context: I live in Ballantyne (south Charlotte) and work at 500 Tyvola Rd. I wan
 Daily agent that searches for apartments to rent for the September 2026 move-in.
 
 - **Budget:** $1,400/month, firm
-- **Area:** south Charlotte (Ballantyne, Steele Creek, Pineville, Tyvola, etc.), max 12 miles / 30 min to 500 Tyvola Rd
+- **Area:** south Charlotte (see [`shared/charlotte-context.md`](./shared/charlotte-context.md))
 - **Requirements:** 1BR or studio, in-unit laundry, hard flooring, on-site parking, unfurnished
-- **Pipeline:**
-  1. The agent searches Zillow, Apartments.com, Zumper, HotPads, Trulia, Rent.com, Realtor.com, and major property managers
-  2. Ranks the top 10 with source diversity (min 4 distinct domains, max 3 per domain)
-  3. Creates a Gmail draft with a human-readable digest plus a JSON block
-  4. Apps Script (`apps-script/Code.gs`) runs hourly, extracts the JSON from the draft, dedupes against the Sheet, appends new rows, and sends the draft to Outlook
+- **Files:**
+  - [`agents/apto-clt/daily-prompt.md`](./agents/apto-clt/daily-prompt.md) — operational prompt for the daily run
+  - [`agents/apto-clt/en-agente.md`](./agents/apto-clt/en-agente.md) / [`agents/apto-clt/es-agente.md`](./agents/apto-clt/es-agente.md) — full criteria (English / Spanish)
+- **Sheet:** [apto-clt](https://docs.google.com/spreadsheets/d/1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI/edit?usp=sharing)
+- **Subject prefix:** `🏠 APTO-CLT daily —`
+- **Data markers:** `<<<APTO-CLT-DATA-START>>>` / `<<<APTO-CLT-DATA-END>>>`
 
-Files:
-- [`daily-prompt.md`](./daily-prompt.md) — operational prompt for the daily agent
-- [`es-agente.md`](./es-agente.md) / [`en-agente.md`](./en-agente.md) — full criteria (Spanish / English)
-- [`apps-script/`](./apps-script) — Gmail → Sheet bridge
-- [`data/inbox/`](./data/inbox) — pending drafts / local history
+### 2. House to buy — `casa-clt` (skeleton — criteria TODO)
 
-Sheet:
-[apto-clt](https://docs.google.com/spreadsheets/d/1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI/edit?usp=sharing)
+Daily agent that searches for houses, townhouses, and condos to buy in Charlotte and surroundings. Same architecture (search → score → Gmail draft → Sheet sync), buyer-specific criteria.
 
-### 2. House to buy — `casa-clt` (planned)
+- **Real ceiling:** PITI envelope, not list price
+- **Files:**
+  - [`agents/casa-clt/daily-prompt.md`](./agents/casa-clt/daily-prompt.md) — operational prompt
+  - [`agents/casa-clt/en-agente.md`](./agents/casa-clt/en-agente.md) — full criteria, contains `TODO:` placeholders for budget, down payment, PITI cap, year-built floor, HOA ceiling, property type ranking
+- **Sheet:** TODO — create the Sheet, paste headers (see daily-prompt.md "Sheet column schema"), then paste the Sheet ID into `apps-script/Code.gs` `AGENTS[1].sheetId`
+- **Subject prefix:** `🏡 CASA-CLT daily —`
+- **Data markers:** `<<<CASA-CLT-DATA-START>>>` / `<<<CASA-CLT-DATA-END>>>`
 
-Future agent to search for a house to purchase. Same architecture (search → score → Gmail draft → Sheet sync), different criteria:
+**Before this agent produces useful output, the user must:**
+1. Fill in every `TODO:` marker in `agents/casa-clt/en-agente.md` (purchase budget, down payment, max PITI, min beds/baths/sqft, year-built floor, HOA ceiling, property type ranking)
+2. Create the casa-clt Google Sheet with the proposed column headers
+3. Paste the Sheet ID into `AGENTS[1].sheetId` in `apps-script/Code.gs`
+4. Paste the Sheet URL into the body template in `agents/casa-clt/daily-prompt.md`
 
-- Budget, down payment, financing scenarios
-- Tax + HOA + insurance estimates
-- School ratings, walkability, future appreciation
-- Inspection history, year built, lot size
-- Sources: Zillow, Redfin, Realtor.com, MLS feeds, Compass
-
-Pending: define criteria and deal-breakers before implementing.
+Until step 3 is done, the Apps Script bridge skips casa-clt and logs a "sheetId is TODO" warning. apto-clt is unaffected.
 
 ## Shared architecture
 
@@ -48,11 +70,11 @@ Claude agent (sandbox)
     │ create_draft (Gmail MCP)
     ▼
 Gmail Drafts ──────────► Apps Script (hourly trigger)
-                              │
-                              │ parse JSON block
-                              │ dedupe vs Sheet
+                              │  loops AGENTS, per-agent try/catch
+                              │  parse JSON block (per agent's markers)
+                              │  dedupe vs that agent's Sheet
                               ▼
-                         Google Sheet
+                         Google Sheet (per agent)
                               │
                               │ draft.send()
                               ▼
@@ -60,3 +82,11 @@ Gmail Drafts ──────────► Apps Script (hourly trigger)
 ```
 
 Why the bridge: the Claude sandbox cannot reach `script.google.com`, and the Gmail MCP does not expose `send_email`. The draft is the data transport; Apps Script finalizes it.
+
+## Adding a third agent
+
+1. Create `agents/<name>/daily-prompt.md` and `agents/<name>/en-agente.md` (start from one of the existing agents as a template). Pick a unique subject prefix and unique data markers.
+2. Create a Google Sheet for the new agent with a `LINK` column in row 1 (required for dedup) plus whatever columns the agent's row payload includes.
+3. Add a new object to the `AGENTS` array in `apps-script/Code.gs` with that agent's `sheetId`, `subjectPrefix`, `dataStart`, `dataEnd`.
+4. Save Code.gs. The existing hourly trigger automatically picks up the new agent on the next tick.
+5. Add `data/inbox/<name>/.gitkeep` for local staging.

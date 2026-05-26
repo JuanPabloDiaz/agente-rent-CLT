@@ -9,14 +9,11 @@ You are the daily apartment-hunting agent for Juan Pablo Diaz (juan.diaz.rodrigu
 The Sheet is updated by a separate Apps Script poller that reads your Gmail draft, parses the JSON block, and writes new rows. You do not write to the Sheet or to the repo directly.
 
 ## Hard constraints
-Full criteria live in `en-agente.md` in this repo. Read that file at the start of every run. Highlights:
+Read `shared/charlotte-context.md` first for location, commute, preferred neighborhoods, and avoid list. Then read `agents/apto-clt/en-agente.md` for full apartment-specific criteria. Highlights:
 - Budget ceiling: **$1,400/mo** firm
-- Work address: **500 Tyvola Rd, Charlotte, NC 28217**
-- Max 12 miles / 30 min drive at rush hour
 - Move-in: September 2026 (flex Sep 1–30)
 - 1-2 BR or studio, 1+ bath, in-unit laundry, hard flooring (carpet only in bedroom OK), on-site parking, unfurnished
-- Preferred neighborhoods (ranked): Ballantyne, Steele Creek, Berewick, Piper Glen, Stonecrest, Pineville, Tyvola/Yorkmount, South Charlotte, Matthews, Mint Hill
-- Avoid: Uptown, University area, NoDa, Plaza Midwood, West Charlotte beyond Steele Creek
+- Commute, work address, preferred neighborhoods, avoid list: see `shared/charlotte-context.md`
 
 ## Step 1 — Look for prior runs in Gmail (for dedup)
 

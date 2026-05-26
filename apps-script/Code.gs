@@ -1,9 +1,11 @@
-// APTO-CLT Tracker — Apps Script
+// CLT Real Estate Agents — Apps Script bridge
 //
-// Reads Gmail drafts created by the daily Claude agent, extracts a JSON
-// payload from the body, and merges new/changed rows into the Sheet.
+// Polls Gmail drafts created by the daily Claude agents (apto-clt for
+// rentals, casa-clt for purchases) and merges new/changed rows into each
+// agent's Google Sheet. One script, one trigger, one Google project — both
+// agents are configured in the AGENTS array below.
 //
-// Robustness features:
+// Robustness features (apply per agent):
 // - Reads Sheet headers from row 1 on every run, so columns can be reordered
 //   in the UI without breaking the script.
 // - Matches incoming rows against existing rows by LINK first, then by
@@ -13,10 +15,12 @@
 //   (price, score, source, notes with a price-change log entry, distance if
 //   newer, link if newer). The original ID and DATE-found are preserved so
 //   history isn't lost.
-// - For a brand-new building: appends a row, defaulting STATUS to "Missing"
+// - For a brand-new listing: appends a row, defaulting STATUS to "Missing"
 //   so the tracker always shows a review state.
 // - After processing a draft, sends it via GmailDraft.send() so the digest
 //   lands in the recipient inbox (e.g. jpdiaz0@outlook.com).
+// - Each agent runs inside its own try/catch so one agent's failure cannot
+//   block the other.
 //
 // One-time setup:
 // 1. Open Apps Script editor on juan.diaz.rodriguez93@gmail.com.
@@ -28,10 +32,23 @@
 //      Interval: Every hour
 // 4. Authorize Sheets + Gmail when prompted.
 
-const SHEET_ID = '1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI';
-const SUBJECT_PREFIX = '🏠 APTO-CLT daily';
-const DATA_START = '<<<APTO-CLT-DATA-START>>>';
-const DATA_END = '<<<APTO-CLT-DATA-END>>>';
+const AGENTS = [
+  {
+    name: 'apto-clt',
+    sheetId: '1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI',
+    subjectPrefix: '🏠 APTO-CLT daily',
+    dataStart: '<<<APTO-CLT-DATA-START>>>',
+    dataEnd: '<<<APTO-CLT-DATA-END>>>',
+  },
+  {
+    name: 'casa-clt',
+    sheetId: '<TODO-USER-FILLS-IN>',
+    subjectPrefix: '🏡 CASA-CLT daily',
+    dataStart: '<<<CASA-CLT-DATA-START>>>',
+    dataEnd: '<<<CASA-CLT-DATA-END>>>',
+  },
+];
+
 const DEFAULT_STATUS = 'Missing';
 
 // Fields that get refreshed on price-change updates. The rest (ID, original
@@ -41,8 +58,7 @@ const REFRESH_ON_UPDATE = ['PRICE', 'SCORE', 'SOURCE', 'DISTANCE APROX', 'LINK',
 // ===== Time-driven entry point =====
 
 function pollGmailDrafts() {
-  const props = PropertiesService.getScriptProperties();
-  const processed = JSON.parse(props.getProperty('processed_drafts') || '{}');
+  migrateLegacyProcessedDrafts();
 
   const drafts = GmailApp.getDrafts();
   if (drafts.length === 0) {
@@ -50,7 +66,26 @@ function pollGmailDrafts() {
     return;
   }
 
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
+  for (const agent of AGENTS) {
+    try {
+      processAgent(agent, drafts);
+    } catch (e) {
+      console.error('[' + agent.name + '] failed: ' + (e && e.stack ? e.stack : e));
+    }
+  }
+}
+
+function processAgent(agent, drafts) {
+  if (!agent.sheetId || agent.sheetId.indexOf('<TODO') === 0) {
+    console.log('[' + agent.name + '] skipped: sheetId is TODO');
+    return;
+  }
+
+  const propKey = 'processed_drafts_' + agent.name;
+  const props = PropertiesService.getScriptProperties();
+  const processed = JSON.parse(props.getProperty(propKey) || '{}');
+
+  const sheet = SpreadsheetApp.openById(agent.sheetId).getSheets()[0];
   const headerMap = readHeaderMap(sheet);
   if (headerMap['LINK'] === undefined) {
     throw new Error('Sheet missing LINK column — cannot dedupe. Add a LINK header in row 1.');
@@ -72,14 +107,14 @@ function pollGmailDrafts() {
 
     const msg = draft.getMessage();
     const subject = msg.getSubject() || '';
-    if (!subject.startsWith(SUBJECT_PREFIX)) continue;
+    if (!subject.startsWith(agent.subjectPrefix)) continue;
 
     totalDraftsMatched++;
     const body = msg.getPlainBody();
-    const payload = extractPayload(body);
+    const payload = extractPayload(body, agent);
 
     if (!payload) {
-      console.warn('Could not parse payload in draft ' + draftId + ' (subject: ' + subject + ')');
+      console.warn('[' + agent.name + '] could not parse payload in draft ' + draftId + ' (subject: ' + subject + ')');
       processed[draftId] = { processedAt: new Date().toISOString(), error: 'parse_failed' };
       totalSkippedDrafts++;
       continue;
@@ -138,7 +173,7 @@ function pollGmailDrafts() {
     try {
       draft.send();
     } catch (sendErr) {
-      console.warn('Failed to send draft ' + draftId + ': ' + sendErr);
+      console.warn('[' + agent.name + '] failed to send draft ' + draftId + ': ' + sendErr);
       sendStatus = 'send_failed: ' + String(sendErr).slice(0, 200);
     }
 
@@ -153,15 +188,32 @@ function pollGmailDrafts() {
     };
   }
 
-  props.setProperty('processed_drafts', JSON.stringify(processed));
+  props.setProperty(propKey, JSON.stringify(processed));
   console.log(
-    'pollGmailDrafts: drafts=' + drafts.length +
+    '[' + agent.name + '] drafts=' + drafts.length +
     ' matched=' + totalDraftsMatched +
     ' appended=' + totalAppended +
     ' updated=' + totalUpdated +
     ' unchanged=' + totalUnchanged +
     ' skipped_drafts=' + totalSkippedDrafts
   );
+}
+
+// One-time migration: copy the old `processed_drafts` key (single-agent era)
+// into `processed_drafts_apto-clt`, then delete the old key. Idempotent — if
+// the new key already exists, the old key is just deleted.
+function migrateLegacyProcessedDrafts() {
+  const props = PropertiesService.getScriptProperties();
+  const legacy = props.getProperty('processed_drafts');
+  if (legacy === null) return;
+  const targetKey = 'processed_drafts_apto-clt';
+  if (props.getProperty(targetKey) === null) {
+    props.setProperty(targetKey, legacy);
+    console.log('migrateLegacyProcessedDrafts: copied legacy key to ' + targetKey);
+  } else {
+    console.log('migrateLegacyProcessedDrafts: ' + targetKey + ' already exists, dropping legacy key');
+  }
+  props.deleteProperty('processed_drafts');
 }
 
 // ===== Existing-row indexing =====
@@ -205,9 +257,6 @@ function appendRows(sheet, headerMap, rows) {
 
   const startRow = sheet.getLastRow() + 1;
   sheet.getRange(startRow, 1, matrix.length, lastCol).setValues(matrix);
-
-  // Now that they exist, fix the placeholder rowNumbers so a subsequent
-  // payload in the same poll can update them if needed. (Optional polish.)
 }
 
 function updateRowInPlace(sheet, headerMap, existing, incoming, todayDate) {
@@ -236,8 +285,6 @@ function updateRowInPlace(sheet, headerMap, existing, incoming, todayDate) {
   // tail. Cap NOTES at 1000 chars to avoid runaway growth.
   const changeNote = '[' + todayDate + '] precio: $' + oldPrice + ' -> $' + newPrice + '.';
   const existingNotes = String(currentMap.NOTES || '').trim();
-  // Avoid duplicating the same change-note if poller runs twice and price
-  // happens to be the same as before the prior update (rare).
   const newNotes = existingNotes.startsWith(changeNote)
     ? existingNotes
     : (changeNote + (existingNotes ? ' ' + existingNotes : '')).slice(0, 1000);
@@ -253,7 +300,7 @@ function updateRowInPlace(sheet, headerMap, existing, incoming, todayDate) {
   const headersOrdered = new Array(lastCol).fill(null);
   Object.entries(headerMap).forEach(([name, idx]) => { headersOrdered[idx] = name; });
   const newRow = headersOrdered.map(h => {
-    if (h === null) return currentRow[headersOrdered.indexOf(null)] || ''; // unlikely
+    if (h === null) return currentRow[headersOrdered.indexOf(null)] || '';
     const v = currentMap[h];
     return v !== undefined && v !== null ? v : '';
   });
@@ -301,12 +348,12 @@ function todayISO() {
 
 // ===== Payload extraction =====
 
-function extractPayload(body) {
+function extractPayload(body, agent) {
   if (!body) return null;
-  const startIdx = body.indexOf(DATA_START);
-  const endIdx = body.indexOf(DATA_END);
+  const startIdx = body.indexOf(agent.dataStart);
+  const endIdx = body.indexOf(agent.dataEnd);
   if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) return null;
-  const json = body.substring(startIdx + DATA_START.length, endIdx).trim();
+  const json = body.substring(startIdx + agent.dataStart.length, endIdx).trim();
   try {
     return JSON.parse(json);
   } catch (e) {
@@ -321,21 +368,33 @@ function runOnce() {
 }
 
 function resetProcessedDrafts() {
-  PropertiesService.getScriptProperties().deleteProperty('processed_drafts');
-  console.log('Cleared processed_drafts. Next pollGmailDrafts will re-scan all drafts.');
+  const props = PropertiesService.getScriptProperties();
+  AGENTS.forEach(agent => {
+    props.deleteProperty('processed_drafts_' + agent.name);
+  });
+  props.deleteProperty('processed_drafts'); // legacy key, just in case
+  console.log('Cleared processed_drafts_* for all agents. Next pollGmailDrafts will re-scan all drafts.');
 }
 
 function showProcessedSummary() {
-  const processed = JSON.parse(
-    PropertiesService.getScriptProperties().getProperty('processed_drafts') || '{}'
-  );
-  console.log('Processed drafts: ' + Object.keys(processed).length);
-  Object.entries(processed).forEach(([id, info]) => {
-    console.log(id + ' -> ' + JSON.stringify(info));
+  const props = PropertiesService.getScriptProperties();
+  AGENTS.forEach(agent => {
+    const key = 'processed_drafts_' + agent.name;
+    const processed = JSON.parse(props.getProperty(key) || '{}');
+    console.log('[' + agent.name + '] processed drafts: ' + Object.keys(processed).length);
+    Object.entries(processed).forEach(([id, info]) => {
+      console.log('  ' + id + ' -> ' + JSON.stringify(info));
+    });
   });
 }
 
 function showHeaderMap() {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
-  console.log(JSON.stringify(readHeaderMap(sheet), null, 2));
+  AGENTS.forEach(agent => {
+    if (!agent.sheetId || agent.sheetId.indexOf('<TODO') === 0) {
+      console.log('[' + agent.name + '] sheetId is TODO, skipping');
+      return;
+    }
+    const sheet = SpreadsheetApp.openById(agent.sheetId).getSheets()[0];
+    console.log('[' + agent.name + '] ' + JSON.stringify(readHeaderMap(sheet), null, 2));
+  });
 }
