@@ -99,7 +99,6 @@ For each, build a row object:
 
 ```json
 {
-  "ID": "house-YYYYMMDD-01",
   "DATE": "YYYY-MM-DD",
   "NAME": "Listing name or street address as title",
   "TYPE": "house",
@@ -120,7 +119,8 @@ For each, build a row object:
   "SCORE": 78,
   "STATUS": "",
   "NOTES": "concise: nice-to-haves, red flags, why ranked high/low",
-  "SOURCE": "redfin"
+  "SOURCE": "redfin",
+  "ID": "house-YYYYMMDD-01"
 }
 ```
 
@@ -203,7 +203,7 @@ If 0 candidates, the digest body still includes the JSON block with `"rows": []`
 The casa-clt Google Sheet must have these column headers in row 1 (any order — the poller reads headers dynamically):
 
 ```
-ID | DATE | NAME | TYPE | ADDRESS | PRICE | BEDS | BATHS | SQF | LOT | YEAR_BUILT | HOA | EST_TAXES | EST_PITI | PRICE_PER_SQF | DOM | LINK | DISTANCE APROX | SCORE | STATUS | NOTES | SOURCE
+DATE | NAME | TYPE | ADDRESS | PRICE | BEDS | BATHS | SQF | LOT | YEAR_BUILT | HOA | EST_TAXES | EST_PITI | PRICE_PER_SQF | DOM | LINK | DISTANCE APROX | SCORE | STATUS | NOTES | SOURCE | ID
 ```
 
 `LINK` is required (used for dedup). All other columns are optional from the script's perspective — missing columns just mean those fields aren't synced. If you add the column later, the next poll picks it up automatically.
