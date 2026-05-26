@@ -102,6 +102,7 @@ For each, build a row object:
   "ID": "house-YYYYMMDD-01",
   "DATE": "YYYY-MM-DD",
   "NAME": "Listing name or street address as title",
+  "TYPE": "house",
   "ADDRESS": "Full street address, Charlotte NC ZIP",
   "PRICE": 385000,
   "BEDS": "3",
@@ -126,6 +127,7 @@ For each, build a row object:
 Field rules:
 - `ID`: `house-YYYYMMDD-NN` where NN = 01..10 sequence
 - `DATE`: today YYYY-MM-DD (Charlotte time)
+- `TYPE`: one of `"house"`, `"condo"`, `"townhouse"`, `"new-construction"`, or `"other"` (lowercase, hyphenated). Use the listing's classification — if a builder lists a brand-new detached single-family as "new construction", prefer `"new-construction"` over `"house"`.
 - `PRICE`, `EST_TAXES`, `EST_PITI`, `HOA`, `PRICE_PER_SQF`, `DOM`: integers, no `$`, no commas
 - `BEDS`: `"1"`, `"2"`, `"3"`, ...
 - `BATHS`: decimal string, e.g. `"2"`, `"2.5"`
@@ -152,12 +154,12 @@ Buenos días Juan,
 
 Encontré {N} casas/condos nuevos hoy. Top picks (listados completos abajo):
 
-1. {NAME} — ${PRICE} — {NEIGHBORHOOD} — score {SCORE}
+1. {NAME} — ${PRICE} — {TYPE} — {NEIGHBORHOOD} — score {SCORE}
    {DISTANCE} | {BEDS}BR/{BATHS}BA | {SQF} sqft | PITI ~${EST_PITI}/mo | {SOURCE}
    {LINK}
    Why: {1-line summary}
 
-2. {NAME} — ${PRICE} — {NEIGHBORHOOD} — score {SCORE}
+2. {NAME} — ${PRICE} — {TYPE} — {NEIGHBORHOOD} — score {SCORE}
    {DISTANCE} | {BEDS}BR/{BATHS}BA | {SQF} sqft | PITI ~${EST_PITI}/mo | {SOURCE}
    {LINK}
    Why: {1-line summary}
@@ -196,15 +198,17 @@ The JSON block:
 
 If 0 candidates, the digest body still includes the JSON block with `"rows": []`.
 
-## Sheet column schema (proposed)
+## Sheet column schema
 
-The casa-clt Google Sheet should have these column headers in row 1 (any order — the poller reads headers dynamically):
+The casa-clt Google Sheet must have these column headers in row 1 (any order — the poller reads headers dynamically):
 
 ```
-ID | DATE | NAME | ADDRESS | PRICE | BEDS | BATHS | SQF | LOT | YEAR_BUILT | HOA | EST_TAXES | EST_PITI | PRICE_PER_SQF | DOM | LINK | DISTANCE APROX | SCORE | STATUS | NOTES | SOURCE
+ID | DATE | NAME | TYPE | ADDRESS | PRICE | BEDS | BATHS | SQF | LOT | YEAR_BUILT | HOA | EST_TAXES | EST_PITI | PRICE_PER_SQF | DOM | LINK | DISTANCE APROX | SCORE | STATUS | NOTES | SOURCE
 ```
 
-`LINK` is required (used for dedup). All other columns are optional from the script's perspective — missing columns just mean those fields aren't synced.
+`LINK` is required (used for dedup). All other columns are optional from the script's perspective — missing columns just mean those fields aren't synced. If you add the column later, the next poll picks it up automatically.
+
+`TYPE` is a buyer-specific column (not present in apto-clt) that captures whether the listing is a `house`, `condo`, `townhouse`, `new-construction`, or `other`.
 
 ## Failure handling
 
