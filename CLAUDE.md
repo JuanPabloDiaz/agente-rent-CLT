@@ -38,7 +38,8 @@ Each agent has four identifiers that MUST line up across three places:
 | `subjectPrefix`     | `agents/<name>/daily-prompt.md` Step 6               | `AGENTS[]` in `apps-script/Code.gs` |
 | `dataStart` / `dataEnd` markers | `agents/<name>/daily-prompt.md` Step 6   | `AGENTS[]` in `apps-script/Code.gs` |
 | `sheetId`           | `AGENTS[]` in `apps-script/Code.gs` (+ README links) | Apps Script only                 |
-| Column headers      | Row 1 of the Google Sheet (dynamic, any order)       | `readHeaderMap()` in `Code.gs`   |
+| `sheetName` (optional) | `AGENTS[]` in `apps-script/Code.gs`               | `openAgentSheet()` — named tab if set, else first tab. Multiple agents can share one spreadsheet by pinning different tab names. Failing to pin an agent that shares a spreadsheet is a footgun: reordering tabs in the UI silently redirects the "first tab" agent to the wrong tab. |
+| Column headers      | Row 1 of the target tab (dynamic, any order)         | `readHeaderMap()` in `Code.gs`   |
 
 If you change any of these in one place, change them everywhere. Symptoms of drift: drafts pile up unprocessed (subject/marker mismatch) or `Sheet missing LINK column` error (header rename).
 
@@ -46,8 +47,8 @@ If you change any of these in one place, change them everywhere. Symptoms of dri
 
 ## Current agents
 
-- **`apto-clt`** — active. Rental search (1BR/studio), $1,400/mo firm ceiling, Sep 2026 move-in, 12 mi shared envelope.
-- **`apto-2bed-2bath`** — active in `AGENTS[]` with a `<TODO-apto-2bed-2bath-sheet-id>` sentinel (skipped by the poller until the Sheet is created and its ID pasted in). Rental search strictly limited to **2BR AND 2BA** — 1BR/studio/2BR-1BA are rejected outright, not put in an "almost meets criteria" bucket. $1,500/mo firm, **8 mi / 25 min** commute cap (overrides the shared 12 mi envelope). Payload schema adds a `BATHS` column vs `apto-clt`; ID prefix is `apt2br-YYYYMMDD-NN`.
+- **`apto-clt`** — active. Rental search for **studio or 1BR** (1BR preferred). 2BR is rejected — that's the `apto-2bed-2bath` agent's lane. $1,400/mo firm ceiling, Sep 2026 move-in, 12 mi shared envelope. Rows land on the `1 bed` tab of spreadsheet `1fWy3rw…B2QI`. No `BEDS` column in the payload — the studio-vs-1BR distinction is dropped in the sheet (agent may put the type as the first token of `NOTES` if useful).
+- **`apto-2bed-2bath`** — active. Rental search strictly limited to **2BR AND 2BA** — 1BR/studio/2BR-1BA are rejected outright, not put in an "almost meets criteria" bucket. $1,500/mo firm, **8 mi / 25 min** commute cap (overrides the shared 12 mi envelope). Shares the same spreadsheet as `apto-clt`; rows land on the `apto-2bed-2bath` tab. ID prefix is `apt2br-YYYYMMDD-NN`. No `BEDS` / `BATHS` columns in the payload — the tab name is the spec.
 - **`casa-clt`** — skeleton. `agents/casa-clt/en-agente.md` still contains `TODO:` markers (budget, PITI envelope, min beds/baths/sqft, year-built floor, HOA ceiling, property type ranking). The daily prompt tells the agent to surface these TODOs in the digest rather than invent numbers.
 
 Shared location/commute facts (Ballantyne origin, 500 Tyvola Rd work address, 12 mi / 30 min envelope, ranked neighborhood list, avoid list) live in `shared/charlotte-context.md`. Change them there, not in per-agent files.
@@ -80,7 +81,7 @@ State is per-agent script properties: `processed_drafts_<agent.name>`. A legacy 
 
 `processAgent()` in `Code.gs` does more than append:
 - Matches incoming rows to existing rows by `LINK` first, then by `normalizeAddress(ADDRESS)` (strips `unit/apt/suite/#…` and punctuation). Same building never inserted twice regardless of source.
-- If `PRICE` changed on a matched row, `updateRowInPlace()` refreshes the fields in `REFRESH_ON_UPDATE` (`PRICE, SCORE, SOURCE, DISTANCE APROX, LINK, BEDS, SQF`), prepends a dated price-change line to `NOTES` (capped at 1000 chars), and **preserves** `ID`, original `DATE`, and any user-set `STATUS` other than empty.
+- If `PRICE` changed on a matched row, `updateRowInPlace()` refreshes the fields in `REFRESH_ON_UPDATE` (`PRICE, SCORE, SOURCE, DISTANCE APROX, LINK, SQF`), prepends a dated price-change line to `NOTES` (capped at 1000 chars), and **preserves** `ID`, original `DATE`, and any user-set `STATUS` other than empty.
 - Empty `STATUS` on append defaults to `"Missing"`.
 
 If you're changing the payload schema, keep `REFRESH_ON_UPDATE` in sync — silently dropped fields on price updates are the most likely bug.

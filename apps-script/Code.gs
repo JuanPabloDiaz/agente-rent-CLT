@@ -8,6 +8,9 @@
 // Robustness features (apply per agent):
 // - Reads Sheet headers from row 1 on every run, so columns can be reordered
 //   in the UI without breaking the script.
+// - Each agent targets one tab. If `sheetName` is set on the agent, that
+//   named tab is used; otherwise the first tab is used. Two agents can share
+//   the same spreadsheet by pointing at different tab names.
 // - Matches incoming rows against existing rows by LINK first, then by
 //   normalized ADDRESS (case- and unit-insensitive). Same building is never
 //   inserted twice regardless of which source surfaced it.
@@ -36,6 +39,7 @@ const AGENTS = [
   {
     name: 'apto-clt',
     sheetId: '1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI',
+    sheetName: '1 bed',
     subjectPrefix: '🏠 APTO-CLT daily',
     dataStart: '<<<APTO-CLT-DATA-START>>>',
     dataEnd: '<<<APTO-CLT-DATA-END>>>',
@@ -49,7 +53,9 @@ const AGENTS = [
   },
   {
     name: 'apto-2bed-2bath',
-    sheetId: '<TODO-apto-2bed-2bath-sheet-id>',
+    // Shares the apto-clt spreadsheet; rows land on the 'apto-2bed-2bath' tab.
+    sheetId: '1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI',
+    sheetName: 'apto-2bed-2bath',
     subjectPrefix: '🛏️ APTO-2BR2BA daily',
     dataStart: '<<<APTO-2BR2BA-DATA-START>>>',
     dataEnd: '<<<APTO-2BR2BA-DATA-END>>>',
@@ -59,8 +65,10 @@ const AGENTS = [
 const DEFAULT_STATUS = 'Missing';
 
 // Fields that get refreshed on price-change updates. The rest (ID, original
-// DATE, STATUS) are preserved.
-const REFRESH_ON_UPDATE = ['PRICE', 'SCORE', 'SOURCE', 'DISTANCE APROX', 'LINK', 'BEDS', 'SQF'];
+// DATE, STATUS) are preserved. BEDS/BATHS intentionally absent — each tab
+// is a single bed/bath spec by construction (tab name = spec), and neither
+// column is part of any current agent's payload.
+const REFRESH_ON_UPDATE = ['PRICE', 'SCORE', 'SOURCE', 'DISTANCE APROX', 'LINK', 'SQF'];
 
 // ===== Time-driven entry point =====
 
@@ -92,7 +100,7 @@ function processAgent(agent, drafts) {
   const props = PropertiesService.getScriptProperties();
   const processed = JSON.parse(props.getProperty(propKey) || '{}');
 
-  const sheet = SpreadsheetApp.openById(agent.sheetId).getSheets()[0];
+  const sheet = openAgentSheet(agent);
   const headerMap = readHeaderMap(sheet);
   if (headerMap['LINK'] === undefined) {
     throw new Error('Sheet missing LINK column — cannot dedupe. Add a LINK header in row 1.');
@@ -320,6 +328,24 @@ function updateRowInPlace(sheet, headerMap, existing, incoming, todayDate) {
 
 // ===== Header + column helpers =====
 
+// Open the target tab for an agent. If agent.sheetName is set, open that
+// named tab and throw if it doesn't exist (fail loud rather than silently
+// writing to the wrong tab). If not set, fall back to the first tab.
+function openAgentSheet(agent) {
+  const ss = SpreadsheetApp.openById(agent.sheetId);
+  if (agent.sheetName) {
+    const sheet = ss.getSheetByName(agent.sheetName);
+    if (!sheet) {
+      throw new Error(
+        'Tab "' + agent.sheetName + '" not found in spreadsheet ' + agent.sheetId +
+        ' for agent ' + agent.name + '. Create the tab or fix the sheetName.'
+      );
+    }
+    return sheet;
+  }
+  return ss.getSheets()[0];
+}
+
 function readHeaderMap(sheet) {
   const lastCol = sheet.getLastColumn();
   if (lastCol === 0) throw new Error('Sheet has no columns');
@@ -401,7 +427,12 @@ function showHeaderMap() {
       console.log('[' + agent.name + '] sheetId is TODO, skipping');
       return;
     }
-    const sheet = SpreadsheetApp.openById(agent.sheetId).getSheets()[0];
-    console.log('[' + agent.name + '] ' + JSON.stringify(readHeaderMap(sheet), null, 2));
+    try {
+      const sheet = openAgentSheet(agent);
+      const tabLabel = agent.sheetName ? ' (tab: ' + agent.sheetName + ')' : ' (first tab)';
+      console.log('[' + agent.name + ']' + tabLabel + ' ' + JSON.stringify(readHeaderMap(sheet), null, 2));
+    } catch (e) {
+      console.error('[' + agent.name + '] ' + (e && e.message ? e.message : e));
+    }
   });
 }

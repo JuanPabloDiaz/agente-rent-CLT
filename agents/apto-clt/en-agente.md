@@ -37,7 +37,7 @@ and rush-hour drive time to the work address.
 Only include listings that meet ALL of the following (otherwise put them in
 a separate "almost meets criteria" section):
 
-- Studio or 1-2 bedrooms (1 bedroom preferred)
+- Studio or 1 bedroom (1 bedroom preferred). No 2BR — 2BR/2BA belongs to the apto-2bed-2bath agent.
 - Minimum 1 bathroom
 - Unfurnished
 - In-unit laundry (washer/dryer in the unit; no shared laundry, no

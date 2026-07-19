@@ -12,7 +12,7 @@ The Sheet is updated by a separate Apps Script poller that reads your Gmail draf
 Read `shared/charlotte-context.md` first for location, commute, preferred neighborhoods, and avoid list. Then read `agents/apto-clt/en-agente.md` for full apartment-specific criteria. Highlights:
 - Budget ceiling: **$1,400/mo** firm
 - Move-in: September 2026 (flex Sep 1–30)
-- 1-2 BR or studio, 1+ bath, in-unit laundry, hard flooring (carpet only in bedroom OK), on-site parking, unfurnished
+- Studio or 1 BR (1 BR preferred). Reject 2BR — 2BR/2BA is the sibling `apto-2bed-2bath` agent's territory. 1+ bath, in-unit laundry, hard flooring (carpet only in bedroom OK), on-site parking, unfurnished.
 - Commute, work address, preferred neighborhoods, avoid list: see `shared/charlotte-context.md`
 
 ## Step 1 — Look for prior runs in Gmail (for dedup)
@@ -103,7 +103,6 @@ For each, build a row object:
   "NAME": "Building name",
   "ADDRESS": "Full street address, Charlotte NC ZIP",
   "PRICE": 1350,
-  "BEDS": "1",
   "SQF": "720",
   "LINK": "https://...",
   "DISTANCE APROX": "8.2 mi / 18 min",
@@ -118,7 +117,7 @@ Field rules:
 - `ID`: `apt-YYYYMMDD-NN` where NN = 01..10 sequence
 - `DATE`: today YYYY-MM-DD (UTC)
 - `PRICE`: integer, no `$`, no commas
-- `BEDS`: `"studio"`, `"1"`, `"2"`
+- (No `BEDS` column — the `1 bed` tab holds studios and 1BRs mixed; the distinction is not tracked per-row. If you want to note it, put "studio" or "1BR" as the first token of `NOTES`.)
 - `STATUS`: leave empty `""` — user sets manually in Sheet
 - `NOTES`: short, one line. If over budget, note that explicitly.
 
@@ -141,12 +140,12 @@ Buenos días Juan,
 Encontré {N} apartamentos nuevos hoy. Top picks (listados completos abajo):
 
 1. {NAME} — ${PRICE}/mo — {NEIGHBORHOOD} — score {SCORE}
-   {DISTANCE} | {BEDS}BR | {SOURCE}
+   {DISTANCE} | {SOURCE}
    {LINK}
    Why: {1-line summary}
 
 2. {NAME} — ${PRICE}/mo — {NEIGHBORHOOD} — score {SCORE}
-   {DISTANCE} | {BEDS}BR | {SOURCE}
+   {DISTANCE} | {SOURCE}
    {LINK}
    Why: {1-line summary}
 
@@ -156,7 +155,7 @@ Encontré {N} apartamentos nuevos hoy. Top picks (listados completos abajo):
 
 Resumen mercado (si aplica): {1-2 sentences sobre tendencias vistas hoy}
 
-Las filas aparecerán automáticamente en el Sheet cuando Apps Script sincronice (dentro de 1h):
+Las filas aparecerán automáticamente en la pestaña `1 bed` del Sheet compartido cuando Apps Script sincronice (dentro de 1h):
 https://docs.google.com/spreadsheets/d/1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI/edit
 
 ---

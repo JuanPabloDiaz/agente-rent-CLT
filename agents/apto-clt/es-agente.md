@@ -38,7 +38,7 @@ en hora pico al trabajo.
 Solo incluye listados que cumplan TODO esto (a menos que los pongas en una
 sección separada de "casi cumple"):
 
-- Estudio o 1-2 dormitorios (preferiblemente 1 dormitorio)
+- Estudio o 1 dormitorio (preferiblemente 1 dormitorio). Sin 2BR — 2BR/2BA es del agente apto-2bed-2bath.
 - Mínimo 1 baño
 - Sin amueblar (unfurnished)
 - Lavandería en la unidad (washer/dryer in-unit, sin lavandería compartida

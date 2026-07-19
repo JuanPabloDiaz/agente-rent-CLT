@@ -7,8 +7,11 @@ the data transport: the agent embeds a JSON block inside the Gmail draft
 body, and this Apps Script polls Gmail to extract and sync new rows into
 the matching Google Sheet.
 
-One script, one trigger, one Google project handles both agents
-(`apto-clt`, `casa-clt`) via the `AGENTS` array at the top of `Code.gs`.
+One script, one trigger, one Google project handles all agents
+(`apto-clt`, `apto-2bed-2bath`, `casa-clt`) via the `AGENTS` array at the
+top of `Code.gs`. Two agents (`apto-clt` and `apto-2bed-2bath`) share a
+single spreadsheet by targeting different tabs via the `sheetName` field
+on their `AGENTS[]` entry; `casa-clt` uses a separate spreadsheet.
 
 ## One-time setup
 
@@ -57,9 +60,12 @@ If you previously had a trigger that runs `pollGitHub`, delete it
   4. For each agent: filters drafts by that agent's subject prefix,
      skips drafts already in `processed_drafts_<agent.name>`, extracts
      JSON between that agent's markers.
-  5. Opens that agent's Sheet by `sheetId`. Dedupes by LINK first, then
-     normalized ADDRESS, against existing Sheet rows. Appends remaining
-     rows. Updates rows in place when PRICE changed.
+  5. Opens that agent's target tab via `openAgentSheet(agent)`: the tab
+     named `agent.sheetName` if set, else the spreadsheet's first tab.
+     Missing named tab throws (fail-loud) rather than silently writing
+     to the wrong place. Dedupes by LINK first, then normalized ADDRESS,
+     against existing rows in that tab. Appends remaining rows. Updates
+     rows in place when PRICE changed.
   6. Sends the draft via `draft.send()` — the email lands in the
      recipient inbox (Outlook). The draft disappears from Drafts.
 - Sync delay: up to ~1 hour. Run `runOnce` in the editor for immediate sync.
@@ -100,8 +106,9 @@ does nothing harmful.
 
 ## Adding a new agent
 
-See the root `README.md` "Adding a third agent" section. Short version:
-add a new object to `AGENTS` with `name`, `sheetId`, `subjectPrefix`,
+See the root `README.md` "Adding a new agent" section. Short version:
+add a new object to `AGENTS` with `name`, `sheetId`, optional `sheetName`
+(required if sharing a spreadsheet with another agent), `subjectPrefix`,
 `dataStart`, `dataEnd`. The existing trigger picks it up automatically.
 
 ## Security

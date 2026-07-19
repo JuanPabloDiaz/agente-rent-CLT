@@ -106,8 +106,6 @@ For each, build a row object:
   "NAME": "Building name",
   "ADDRESS": "Full street address, Charlotte NC ZIP",
   "PRICE": 1450,
-  "BEDS": "2",
-  "BATHS": "2",
   "SQF": "1050",
   "LINK": "https://...",
   "DISTANCE APROX": "6.4 mi / 15 min",
@@ -122,8 +120,7 @@ Field rules:
 - `ID`: `apt2br-YYYYMMDD-NN` where NN = 01..10 sequence
 - `DATE`: today YYYY-MM-DD (Charlotte time)
 - `PRICE`: integer, no `$`, no commas
-- `BEDS`: always `"2"` for this agent (any candidate with a different value should have been rejected upstream)
-- `BATHS`: always `"2"` for this agent (reject 1.5, 2.5, 3, etc. — the deal-breaker is exactly 2)
+- (No `BEDS` or `BATHS` columns — the `apto-2bed-2bath` tab is exclusively 2BR/2BA by construction; the tab name is the spec. Candidates that don't match 2/2 must be rejected in Step 2, not emitted with a different bed/bath value.)
 - `STATUS`: leave empty `""` — user sets manually in Sheet
 - `NOTES`: short, one line. If over budget, note that explicitly.
 
@@ -146,12 +143,12 @@ Buenos días Juan,
 Encontré {N} apartamentos 2BR/2BA nuevos hoy. Top picks (listados completos abajo):
 
 1. {NAME} — ${PRICE}/mo — {NEIGHBORHOOD} — score {SCORE}
-   {DISTANCE} | 2BR/2BA | {SQF} sqft | {SOURCE}
+   {DISTANCE} | {SQF} sqft | {SOURCE}
    {LINK}
    Why: {1-line summary}
 
 2. {NAME} — ${PRICE}/mo — {NEIGHBORHOOD} — score {SCORE}
-   {DISTANCE} | 2BR/2BA | {SQF} sqft | {SOURCE}
+   {DISTANCE} | {SQF} sqft | {SOURCE}
    {LINK}
    Why: {1-line summary}
 
@@ -161,7 +158,8 @@ Encontré {N} apartamentos 2BR/2BA nuevos hoy. Top picks (listados completos aba
 
 Resumen mercado (si aplica): {1-2 sentences sobre tendencias de precio 2/2, vecindarios con más inventario, etc.}
 
-Las filas aparecerán automáticamente en el Sheet cuando Apps Script sincronice (dentro de 1h). URL del Sheet: pendiente — se agregará aquí una vez creado y pegado el ID en apps-script/Code.gs.
+Las filas aparecerán automáticamente en la pestaña `apto-2bed-2bath` del Sheet compartido con apto-clt cuando Apps Script sincronice (dentro de 1h):
+https://docs.google.com/spreadsheets/d/1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI/edit
 
 ---
 APTO-2BR2BA machine-readable payload (do not edit — used by sync poller):
@@ -190,13 +188,13 @@ If 0 candidates, the digest body still includes the JSON block with `"rows": []`
 
 ## Sheet column schema
 
-The apto-2bed-2bath Google Sheet must have these column headers in row 1 (any order — the poller reads headers dynamically):
+This agent writes into the `apto-2bed-2bath` tab of the shared apto-clt spreadsheet (same `sheetId` as apto-clt, distinct tab). That tab must have these column headers in row 1 (any order — the poller reads headers dynamically):
 
 ```
-DATE | NAME | ADDRESS | PRICE | BEDS | BATHS | SQF | LINK | DISTANCE APROX | SCORE | STATUS | NOTES | SOURCE | ID
+DATE | NAME | ADDRESS | PRICE | SQF | LINK | DISTANCE APROX | SCORE | STATUS | NOTES | SOURCE | ID
 ```
 
-`LINK` is required (used for dedup). `BATHS` is the new column vs `apto-clt` — since this agent enforces exactly 2 bathrooms, the value in every row is `"2"`, but the column is kept so the payload schema is self-describing.
+`LINK` is required (used for dedup). No `BEDS` / `BATHS` columns — the tab name (`apto-2bed-2bath`) is the spec; every row is 2BR/2BA by construction. Dedup is per-tab, so `apto-clt` and `apto-2bed-2bath` rows never see each other.
 
 ## Failure handling
 
