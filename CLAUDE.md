@@ -46,9 +46,9 @@ If you change any of these in one place, change them everywhere. Symptoms of dri
 
 ## Current agents
 
-- **`apto-clt`** — active. Rental search, $1,400/mo firm ceiling, Sep 2026 move-in.
+- **`apto-clt`** — active. Rental search (1BR/studio), $1,400/mo firm ceiling, Sep 2026 move-in, 12 mi shared envelope.
+- **`apto-2bed-2bath`** — active in `AGENTS[]` with a `<TODO-apto-2bed-2bath-sheet-id>` sentinel (skipped by the poller until the Sheet is created and its ID pasted in). Rental search strictly limited to **2BR AND 2BA** — 1BR/studio/2BR-1BA are rejected outright, not put in an "almost meets criteria" bucket. $1,500/mo firm, **8 mi / 25 min** commute cap (overrides the shared 12 mi envelope). Payload schema adds a `BATHS` column vs `apto-clt`; ID prefix is `apt2br-YYYYMMDD-NN`.
 - **`casa-clt`** — skeleton. `agents/casa-clt/en-agente.md` still contains `TODO:` markers (budget, PITI envelope, min beds/baths/sqft, year-built floor, HOA ceiling, property type ranking). The daily prompt tells the agent to surface these TODOs in the digest rather than invent numbers.
-- **`apto-2bed-2bath`** — untracked WIP; currently a copy of `apto-clt`. Not wired into `AGENTS[]`.
 
 Shared location/commute facts (Ballantyne origin, 500 Tyvola Rd work address, 12 mi / 30 min envelope, ranked neighborhood list, avoid list) live in `shared/charlotte-context.md`. Change them there, not in per-agent files.
 

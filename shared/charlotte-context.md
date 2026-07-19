@@ -27,21 +27,21 @@ ranking happens in one place.
 
 All inside the 12 mi / 30 min envelope. Higher rank = stronger preference.
 
-1. Ballantyne
 2. Steele Creek
 3. Berewick
 4. Piper Glen
-5. Stonecrest
-6. Pineville
-7. Tyvola / Yorkmount (closest to work)
-8. South Charlotte in general
-9. Matthews (verify commute)
-10. Mint Hill (verify commute)
+5. Pineville
+6. Tyvola / Yorkmount (closest to work)
+7. Matthews (verify commute)
+8. Mint Hill (verify commute)
 
 ## Avoid
 
 Do not include listings in these areas:
 
+- Ballantyne
+- Stonecrest
+- South Charlotte in general
 - Center City / Uptown (too expensive, wrong direction from work)
 - University area / UNCC (too far from the south)
 - NoDa / Plaza Midwood (too far from work)

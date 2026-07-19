@@ -47,6 +47,13 @@ const AGENTS = [
     dataStart: '<<<CASA-CLT-DATA-START>>>',
     dataEnd: '<<<CASA-CLT-DATA-END>>>',
   },
+  {
+    name: 'apto-2bed-2bath',
+    sheetId: '<TODO-apto-2bed-2bath-sheet-id>',
+    subjectPrefix: '🛏️ APTO-2BR2BA daily',
+    dataStart: '<<<APTO-2BR2BA-DATA-START>>>',
+    dataEnd: '<<<APTO-2BR2BA-DATA-END>>>',
+  },
 ];
 
 const DEFAULT_STATUS = 'Missing';
