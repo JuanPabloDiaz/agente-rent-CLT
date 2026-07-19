@@ -29,6 +29,8 @@ Two hard sandbox constraints shape this design and are non-obvious from the code
 
 The Gmail draft is therefore both the human digest **and** the data transport. Its body must contain a valid JSON block between the agent's start/end markers; the poller matches those literally.
 
+Apps Script also runs a **weekly seed snapshot** in the reverse direction (Sheet → Gmail → 2BR agent): `snapshotAptoCltForCrossAgent()` filters the `1 bed` tab by STATUS and emails a JSON block (subject `🔗 APTO-CLT-SEEDS weekly`, markers `<<<APTO-CLT-SEEDS-START>>>` / `<<<APTO-CLT-SEEDS-END>>>`) that the `apto-2bed-2bath` agent reads via Gmail MCP `search_threads` to reuse prior human triage. This thread is **not** consumed by `pollGmailDrafts` — its subject deliberately does not match any agent's `subjectPrefix`. STATUS filter mapping lives in `SEED_INCLUDE_PRICE_REJECTS` / `SEED_INCLUDE_LIKED` sets at the top of `Code.gs`.
+
 ## The agent ↔ Apps Script contract (do not break)
 
 Each agent has four identifiers that MUST line up across three places:

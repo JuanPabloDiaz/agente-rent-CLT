@@ -103,6 +103,50 @@ does nothing harmful.
 - `resetProcessedDrafts()` — clear ALL agents' `processed_drafts_*` keys
   plus the legacy key; next poll re-scans every draft (safe —
   `appendRows` still dedupes by LINK/ADDRESS against the Sheet)
+- `runSnapshotOnce()` — manually trigger the weekly seed snapshot (see
+  next section)
+
+## Weekly seed snapshot (apto-clt → apto-2bed-2bath)
+
+`snapshotAptoCltForCrossAgent()` publishes a filtered copy of the 1BR
+sheet to Gmail so the 2BR agent can reuse prior human triage. This is a
+one-way export: the message subject deliberately does **not** match any
+agent's `subjectPrefix`, so `pollGmailDrafts` ignores it.
+
+**Contract:**
+- Reads the `1 bed` tab of the apto-clt spreadsheet (config in
+  `SEED_SOURCE` at top of `Code.gs`).
+- Filters rows by STATUS into two buckets:
+  - `price_rejects` — STATUS in `SEED_INCLUDE_PRICE_REJECTS`
+    (default: `NO - $$$ CARO`)
+  - `liked` — STATUS in `SEED_INCLUDE_LIKED`
+    (default: `LOVE`, `LGTM`, `Need 2 Go!`, `Maybe`)
+- Everything else is dropped (see comments in `Code.gs` for rationale
+  on `Missing`, `NO - FEO/UNSAFE`, `NO - Far`, `NO - Sin Laundry`).
+- Sends a Gmail message to `SEED_RECIPIENT` (default `jpdiaz0@outlook.com`)
+  with:
+  - Subject: `🔗 APTO-CLT-SEEDS weekly — {N_price} price-rejects + {N_liked} liked buildings for {YYYY-MM-DD}`
+  - Body: short human summary + a JSON block bracketed by
+    `<<<APTO-CLT-SEEDS-START>>>` / `<<<APTO-CLT-SEEDS-END>>>` (parsed
+    by the 2BR agent via Gmail MCP `search_threads` on every daily run).
+
+**One-time setup for the weekly trigger:**
+
+1. In the Apps Script editor sidebar → **Triggers** (clock icon) →
+   **Add Trigger**.
+2. Function: `snapshotAptoCltForCrossAgent`
+3. Event source: **Time-driven**
+4. Type: **Week timer** (e.g. Sunday, 6–7 AM)
+5. Save. No additional auth prompts if `pollGmailDrafts` is already
+   authorized (same scopes).
+
+**Tweaking the filter mapping:** edit `SEED_INCLUDE_PRICE_REJECTS` and
+`SEED_INCLUDE_LIKED` at the top of `Code.gs`. The comment block above
+those sets documents why each STATUS value is or isn't included.
+
+**Testing without waiting a week:** run `runSnapshotOnce()` in the
+editor. Check Gmail Sent for the subject line above; verify the JSON
+block parses.
 
 ## Adding a new agent
 

@@ -33,6 +33,32 @@ If no prior threads found, both sets stay empty (first-run case).
 
 Skip any prior thread that doesn't parse cleanly — log it in NOTES of today's digest but don't abort.
 
+## Step 1.5 — Load 1BR seeds (prior triage from the apto-clt sheet)
+
+Apps Script publishes a weekly snapshot of the sibling `apto-clt` (1BR) sheet — filtered to rows the user has actually triaged as reconsiderable for 2BR — to Gmail. This is prior human triage: reuse it to bias today's search.
+
+Use the Gmail MCP `search_threads` tool:
+
+```
+query: "subject:APTO-CLT-SEEDS weekly"
+```
+
+Fetch the most recent match (there's one per week). Extract the JSON block between `<<<APTO-CLT-SEEDS-START>>>` and `<<<APTO-CLT-SEEDS-END>>>`. Parse into two lists:
+
+- `price_rejects` — buildings the user marked `NO - $$$ CARO` on the 1BR sheet. Rejected against the solo $1,400 budget — on the shared $1,500 2BR budget the same building's 2BR/2BA unit may be viable. Strong reconsideration signal.
+- `liked` — buildings the user marked `LOVE` / `LGTM` / `Need 2 Go!` / `Maybe`. Already endorsed for 1BR — a 2BR/2BA unit at the same building beats a cold discovery.
+
+Each seed record has: `name`, `address`, `prior_price`, `prior_status`, `prior_notes`, `source_link`.
+
+Build two in-memory structures for the rest of the run:
+
+- `seed_buildings` — union of `{name, address}` pairs from both lists (used in Step 2 for targeted queries).
+- `seed_by_address` — map from **normalized** address (lowercase, strip `unit`/`apt`/`suite`/`#…`, collapse whitespace) → seed record (used in Step 3 for score boost and Step 5 for NOTES).
+
+Robustness:
+- If no seed thread is found, log a NOTES entry in today's digest (`seed snapshot missing — proceeding cold`) and proceed with empty seed structures. Do not abort — the agent must remain functional if the weekly snapshot fails.
+- If the JSON block is present but unparseable, same treatment: log and proceed cold.
+
 ## Step 2 — Search (broad, source-diverse)
 
 Cast a wide net. Issue **at least 2 search queries per source domain** to avoid letting one site dominate. The agent's WebSearch tends to favor apartments.com — counteract that by using `site:` filters explicitly.
@@ -57,6 +83,16 @@ Suggested query mix (8–12 total searches per run):
 - `greystar.com Charlotte Steele Creek 2/2`
 - `site:apartments.com Piper Glen Charlotte NC 2BR 2BA` (capped — see Step 5 diversity rule)
 
+**Seed-directed queries (in addition to the source-diverse queries above):**
+
+For each building in `seed_buildings` from Step 1.5, issue one targeted query:
+
+```
+"{building name}" Charlotte 2 bedroom 2 bath
+```
+
+Cap at ~15 seed-directed queries per run to avoid burning WebSearch quota. Prioritize `price_rejects` first (highest reconsideration value), then `liked`. Purpose: surface any 2BR/2BA unit currently listed at a building the user has already triaged — the strongest signal we have for a match. These are additive to the 8–12 source-diverse queries, not a replacement.
+
 Only collect listings that:
 - Are **exactly 2 bedrooms AND 2 bathrooms** (reject 2BR/1BA, 2BR/1.5BA, 3BR, 1BR)
 - Have a direct URL to the specific listing (not a search page)
@@ -79,8 +115,14 @@ score = 0
 + 5  if hard flooring confirmed
 + 5  if on-site parking confirmed
 + 5  if pool OR gym in nice-to-haves
++ 15 if seed_by_address hit AND prior_status == "NO - $$$ CARO"
+      (user liked the building for 1BR but priced out on solo budget)
++ 20 if seed_by_address hit AND prior_status in {"LOVE", "LGTM", "Need 2 Go!", "Maybe"}
+      (user already endorsed the building for 1BR)
 - 10 if missing critical info (mark STATUS=Missing)
 ```
+
+Only one seed boost applies per candidate — pick the larger one if both somehow match. Match by normalized address (same normalization as Step 1.5).
 
 ## Step 4 — Distance estimate
 
@@ -122,7 +164,7 @@ Field rules:
 - `PRICE`: integer, no `$`, no commas
 - (No `BEDS` or `BATHS` columns — the `apto-2bed-2bath` tab is exclusively 2BR/2BA by construction; the tab name is the spec. Candidates that don't match 2/2 must be rejected in Step 2, not emitted with a different bed/bath value.)
 - `STATUS`: leave empty `""` — user sets manually in Sheet
-- `NOTES`: short, one line. If over budget, note that explicitly.
+- `NOTES`: short, one line. If over budget, note that explicitly. **If `seed_by_address` hit, prepend NOTES with `[seed: 1BR was $<prior_price>, STATUS=<prior_status>] `** so the prior-triage context lands inline in the Sheet.
 
 If 0 candidates qualify, the `rows` array is `[]` — still send the digest so the poller has a heartbeat.
 

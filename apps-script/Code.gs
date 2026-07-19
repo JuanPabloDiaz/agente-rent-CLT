@@ -70,6 +70,38 @@ const DEFAULT_STATUS = 'Missing';
 // column is part of any current agent's payload.
 const REFRESH_ON_UPDATE = ['PRICE', 'SCORE', 'SOURCE', 'DISTANCE APROX', 'LINK', 'SQF'];
 
+// ===== Cross-agent seed snapshot config =====
+//
+// The `apto-2bed-2bath` agent uses a filtered snapshot of the `apto-clt`
+// (1BR) sheet as prior-triage seed input. STATUS values landing in these
+// two sets flow through; everything else is dropped.
+//
+// Rationale for the mapping (edit these sets to tweak):
+//   'NO - $$$ CARO'    → price rejection on solo $1,400 budget; shared
+//                        $1,500 2BR budget may make the same building viable.
+//   LOVE/LGTM/Need 2 Go!/Maybe → user already endorsed the building.
+// Explicitly excluded (documented, not filtered against):
+//   'Missing'          — un-triaged, no signal
+//   'NO - FEO/UNSAFE'  — quality/safety, doesn't change with unit shape
+//   'NO - Far'         — 8 mi cap already excludes; double-safety
+//   'NO - Sin Laundry' — 2BR agent also requires in-unit laundry
+//   ''                 — blank == un-triaged
+const SEED_INCLUDE_PRICE_REJECTS = new Set(['NO - $$$ CARO']);
+const SEED_INCLUDE_LIKED = new Set(['LOVE', 'LGTM', 'Need 2 Go!', 'Maybe']);
+
+// Source config for the snapshot (mirrors the apto-clt entry in AGENTS[]).
+const SEED_SOURCE = {
+  name: 'apto-clt',
+  sheetId: '1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI',
+  sheetName: '1 bed',
+};
+
+// Gmail delivery for the seed snapshot.
+const SEED_RECIPIENT = 'jpdiaz0@outlook.com';
+const SEED_SUBJECT_PREFIX = '🔗 APTO-CLT-SEEDS weekly';
+const SEED_DATA_START = '<<<APTO-CLT-SEEDS-START>>>';
+const SEED_DATA_END = '<<<APTO-CLT-SEEDS-END>>>';
+
 // ===== Time-driven entry point =====
 
 function pollGmailDrafts() {
@@ -394,10 +426,95 @@ function extractPayload(body, agent) {
   }
 }
 
+// ===== Weekly seed snapshot (apto-clt → apto-2bed-2bath) =====
+//
+// Reads the `1 bed` tab of the apto-clt spreadsheet, filters rows by
+// STATUS (see SEED_INCLUDE_* sets at the top of the file), and emits
+// a Gmail message with a marker block that the 2BR agent parses on its
+// daily run.
+//
+// The message subject deliberately does NOT match any agent's
+// `subjectPrefix`, so `pollGmailDrafts` skips it — this is a one-way
+// export, not a sync target.
+//
+// Add a weekly time-driven trigger for `snapshotAptoCltForCrossAgent`
+// in the Apps Script editor (see apps-script/README.md).
+function snapshotAptoCltForCrossAgent() {
+  const sheet = openAgentSheet(SEED_SOURCE);
+  const headerMap = readHeaderMap(sheet);
+  if (headerMap['STATUS'] === undefined) {
+    throw new Error('Seed source sheet missing STATUS column — cannot filter.');
+  }
+
+  const lastRow = sheet.getLastRow();
+  const priceRejects = [];
+  const liked = [];
+  if (lastRow >= 2) {
+    const lastCol = sheet.getLastColumn();
+    const rows = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    rows.forEach(rowVals => {
+      const status = String(rowVals[headerMap['STATUS']] || '').trim();
+      const bucket = SEED_INCLUDE_PRICE_REJECTS.has(status)
+        ? priceRejects
+        : (SEED_INCLUDE_LIKED.has(status) ? liked : null);
+      if (!bucket) return;
+      bucket.push(buildSeedRecord(rowVals, headerMap, status));
+    });
+  }
+
+  const date = todayISO();
+  const subject = SEED_SUBJECT_PREFIX + ' — ' + priceRejects.length +
+    ' price-rejects + ' + liked.length + ' liked buildings for ' + date;
+  const payload = { version: 1, date: date, price_rejects: priceRejects, liked: liked };
+  const body = buildSeedBody(priceRejects.length, liked.length, date, payload);
+
+  const draft = GmailApp.createDraft(SEED_RECIPIENT, subject, body);
+  draft.send();
+  console.log('snapshotAptoCltForCrossAgent: sent ' + priceRejects.length +
+    ' price-rejects + ' + liked.length + ' liked seeds');
+}
+
+function buildSeedRecord(rowVals, headerMap, status) {
+  const get = (name) => {
+    const idx = headerMap[name];
+    return idx === undefined ? '' : rowVals[idx];
+  };
+  const notes = String(get('NOTES') || '').slice(0, 400);
+  return {
+    name: String(get('NAME') || ''),
+    address: String(get('ADDRESS') || ''),
+    prior_price: parsePrice(get('PRICE')),
+    prior_status: status,
+    prior_notes: notes,
+    source_link: String(get('LINK') || ''),
+  };
+}
+
+function buildSeedBody(nPrice, nLiked, date, payload) {
+  return [
+    'Weekly seed snapshot of the apto-clt 1BR sheet for the apto-2bed-2bath agent.',
+    '',
+    'price_rejects (' + nPrice + '): buildings rejected against solo $1,400 budget.',
+    'liked (' + nLiked + '): buildings marked LOVE / LGTM / Need 2 Go! / Maybe.',
+    '',
+    'The 2BR agent reads the JSON block below on every daily run to bias searches',
+    'toward these buildings and score-boost matching 2BR/2BA candidates.',
+    '',
+    '---',
+    SEED_DATA_START,
+    JSON.stringify(payload, null, 2),
+    SEED_DATA_END,
+  ].join('\n');
+}
+
 // ===== Manual utilities (run from the editor) =====
 
 function runOnce() {
   pollGmailDrafts();
+}
+
+function runSnapshotOnce() {
+  snapshotAptoCltForCrossAgent();
 }
 
 function resetProcessedDrafts() {
