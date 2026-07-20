@@ -65,10 +65,14 @@ const AGENTS = [
 const DEFAULT_STATUS = 'Missing';
 
 // Fields that get refreshed on price-change updates. The rest (ID, original
-// DATE, STATUS) are preserved. BEDS/BATHS intentionally absent — each tab
-// is a single bed/bath spec by construction (tab name = spec), and neither
-// column is part of any current agent's payload.
-const REFRESH_ON_UPDATE = ['PRICE', 'SCORE', 'SOURCE', 'DISTANCE APROX', 'LINK', 'SQF'];
+// DATE, STATUS, ADDRESS, NAME, LINK, DISTANCE APROX) are preserved on
+// update. LINK and DISTANCE APROX are deliberately excluded so the user
+// can hand-edit them (better URL, more accurate distance) without the
+// poller overwriting the fix on the next price change. BEDS/BATHS
+// intentionally absent — each tab is a single bed/bath spec by
+// construction (tab name = spec), and neither column is part of any
+// current agent's payload.
+const REFRESH_ON_UPDATE = ['PRICE', 'SCORE', 'SOURCE', 'SQF'];
 
 // ===== Cross-agent seed snapshot config =====
 //
