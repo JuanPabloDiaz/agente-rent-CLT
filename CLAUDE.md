@@ -29,6 +29,8 @@ Two hard sandbox constraints shape this design and are non-obvious from the code
 
 The Gmail draft is therefore both the human digest **and** the data transport. Its body must contain a valid JSON block between the agent's start/end markers; the poller matches those literally.
 
+**Manual re-runs are supported** — do NOT abort an agent run because a prior digest exists for the same day. Dedup is layered (Step 1 `seen_links`/`seen_addresses` from Gmail history + Apps Script LINK/ADDRESS dedup on the Sheet side), so re-runs are safe. An empty `"rows": []` payload is a valid heartbeat.
+
 Apps Script also runs a **weekly seed snapshot** in the reverse direction (Sheet → Gmail → 2BR agent): `snapshotAptoCltForCrossAgent()` filters the `1 bed` tab by STATUS (only rows in `SEED_INCLUDE` — currently `LOVE`, `LGTM`, `Need 2 Go!`, `Maybe`, `Missing`; all `NO - *` variants and blanks are dropped) and emails a JSON block (subject `APTO-CLT-SEEDS weekly`, markers `<<<APTO-CLT-SEEDS-START>>>` / `<<<APTO-CLT-SEEDS-END>>>`, payload version `2` with a single `seeds` array) that the `apto-2bed-2bath` agent reads via Gmail MCP `search_threads` to reuse prior human triage. This thread is **not** consumed by `pollGmailDrafts` — its subject deliberately does not match any agent's `subjectPrefix`. STATUS filter mapping lives in the `SEED_INCLUDE` set at the top of `Code.gs`.
 
 ## The agent ↔ Apps Script contract (do not break)
