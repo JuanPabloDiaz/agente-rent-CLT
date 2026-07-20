@@ -97,12 +97,17 @@ doesn't allow no-pet households, it's not a problem, but mention it.
 This agent reuses prior human triage from the sibling `apto-clt` (1BR)
 sheet. A weekly Apps Script snapshot publishes a filtered seed list to
 Gmail (subject `APTO-CLT-SEEDS weekly`) containing every building the
-user has flagged for 2BR reconsideration — STATUS in
-`LOVE` / `LGTM` / `Need 2 Go!` / `Maybe` / `Missing`. All `NO - *`
-rejections (`NO - $$$ CARO`, `NO - Far`, `NO - FEO/UNSAFE`,
-`NO - Sin Laundry`) are filtered out by Apps Script — do not revisit
-those buildings. The daily prompt (Step 1.5) loads this snapshot and
-biases queries + scoring toward the seed buildings. See
+user has flagged for 2BR reconsideration:
+
+- **Pre-visit signals** (based on listing only):
+  `LOVE` / `LGTM` / `Need 2 Go!` / `Maybe` / `Missing`
+- **Post-visit signals** ("Fui" = user toured in person, stronger
+  signal): `Fui - LGTM` / `Fui - LOVE` / `Fui - $$$ LOVE`
+
+All `NO - *` rejections (`NO - $$$ CARO`, `NO - Far`, `NO - FEO/UNSAFE`,
+`NO - Sin Laundry`, `NO - Otro`) are filtered out by Apps Script — do
+not revisit those buildings. The daily prompt (Step 1.5) loads this
+snapshot and biases queries + scoring toward the seed buildings. See
 `agents/apto-2bed-2bath/daily-prompt.md` for the mechanics.
 </seed_system>
 

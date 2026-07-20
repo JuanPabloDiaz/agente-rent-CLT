@@ -76,9 +76,20 @@ const REFRESH_ON_UPDATE = ['PRICE', 'SCORE', 'SOURCE', 'DISTANCE APROX', 'LINK',
 // (1BR) sheet as prior-triage seed input. STATUS values in this set flow
 // through; everything else is dropped.
 //
-// The user does the actual triage in the sheet — moving rows into
-// LOVE/LGTM/Need 2 Go!/Maybe/Missing means "reconsider for 2BR". This
-// filter just excludes the categorically rejected records.
+// The user does the actual triage in the sheet — moving rows into any
+// of the values below means "reconsider for 2BR". This filter just
+// excludes the categorically rejected records.
+//
+// Pre-visit signals (based on listing only):
+//   LOVE / LGTM / Need 2 Go! / Maybe / Missing
+// Post-visit signals ("Fui" prefix = user toured in person):
+//   Fui - LGTM       — visited, liked
+//   Fui - LOVE       — visited, loved
+//   Fui - $$$ LOVE   — visited, loved so much willing to stretch budget
+// Post-visit signals are STRONGER than pre-visit ones because in-person
+// tours have already validated the building. All three feed the seed
+// list at flat +20 boost (same as pre-visit LOVE/LGTM in the agent's
+// scoring); the differentiation is in the sheet, not in the score.
 //
 // Rationale for the exclusions (documented, not filtered against):
 //   'NO - $$$ CARO'    — post-triage: user moved shared-budget-viable
@@ -87,6 +98,7 @@ const REFRESH_ON_UPDATE = ['PRICE', 'SCORE', 'SOURCE', 'DISTANCE APROX', 'LINK',
 //   'NO - FEO/UNSAFE'  — quality/safety, doesn't change with unit shape
 //   'NO - Far'         — 2BR agent's 8 mi cap already excludes; double-safety
 //   'NO - Sin Laundry' — 2BR agent also requires in-unit laundry
+//   'NO - Otro'        — misc rejection reason recorded by user
 //   ''                 — blank rows have no STATUS at all — treat as noise
 const SEED_INCLUDE = new Set([
   'LOVE',
@@ -94,6 +106,9 @@ const SEED_INCLUDE = new Set([
   'Need 2 Go!',
   'Maybe',
   'Missing',
+  'Fui - LGTM',
+  'Fui - LOVE',
+  'Fui - $$$ LOVE',
 ]);
 
 // Source config for the snapshot (mirrors the apto-clt entry in AGENTS[]).
@@ -580,6 +595,9 @@ const STATUS_BADGE_COLOR = {
   'Need 2 Go!': '#1a73e8',
   'Maybe': '#f9ab00',
   'Missing': '#5f6368',
+  'Fui - LGTM': '#a855f7',
+  'Fui - LOVE': '#0f9d58',
+  'Fui - $$$ LOVE': '#ec4899',
 };
 
 function escapeHtml(s) {

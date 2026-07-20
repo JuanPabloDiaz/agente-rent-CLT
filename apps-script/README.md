@@ -142,14 +142,19 @@ agent's `subjectPrefix`, so `pollGmailDrafts` ignores it.
 - Reads the `1 bed` tab of the apto-clt spreadsheet (config in
   `SEED_SOURCE` at top of `Code.gs`).
 - Filters rows by STATUS: only rows whose STATUS is in `SEED_INCLUDE`
-  (default: `LOVE`, `LGTM`, `Need 2 Go!`, `Maybe`, `Missing`) become
-  seeds. Everything else is dropped, including:
+  become seeds. The default set covers two signal levels:
+  - **Pre-visit** (based on listing only): `LOVE`, `LGTM`, `Need 2 Go!`,
+    `Maybe`, `Missing`
+  - **Post-visit** ("Fui" prefix = user toured in person, stronger
+    signal): `Fui - LGTM`, `Fui - LOVE`, `Fui - $$$ LOVE`
+  Everything else is dropped, including:
   - `NO - $$$ CARO` — user has already moved shared-budget-viable rows
     out of this bucket into `Maybe` / `Missing` / etc. during manual
     triage. Rows that remain here are genuinely too expensive.
   - `NO - FEO/UNSAFE` — quality/safety, doesn't change with unit shape
   - `NO - Far` — 2BR agent's 8 mi cap already excludes; double-safety
   - `NO - Sin Laundry` — 2BR agent also requires in-unit laundry
+  - `NO - Otro` — misc rejection reason recorded by user
   - blank — no STATUS at all, treat as noise
 - Sends a Gmail message to `SEED_RECIPIENT` (default `jpdiaz0@outlook.com`)
   with:

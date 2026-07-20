@@ -65,7 +65,11 @@ Expected schema (`version === 2`):
 }
 ```
 
-`prior_status` will be one of `LOVE`, `LGTM`, `Need 2 Go!`, `Maybe`, `Missing`. All `NO - *` STATUS values were filtered out by Apps Script (user has already discarded those buildings for reasons that don't change with unit shape). Every seed record is a building the user wants revisited for a 2BR/2BA unit.
+`prior_status` will be one of:
+- **Pre-visit** (evaluated from listing only): `LOVE`, `LGTM`, `Need 2 Go!`, `Maybe`, `Missing`
+- **Post-visit** ("Fui" prefix = user toured in person, stronger signal): `Fui - LGTM`, `Fui - LOVE`, `Fui - $$$ LOVE`
+
+All `NO - *` STATUS values were filtered out by Apps Script (user has already discarded those buildings for reasons that don't change with unit shape). Every seed record is a building the user wants revisited for a 2BR/2BA unit.
 
 **Backwards compatibility:** if `version === 1` (old snapshot with `price_rejects` + `liked` keys), synthesize `seeds = [...price_rejects, ...liked]` and log a NOTES entry `stale seed snapshot v1 — ask user to re-run runSnapshotOnce in Apps Script`.
 
@@ -109,7 +113,7 @@ For each seed record from Step 1.5, issue one targeted query:
 "{building name}" Charlotte 2 bedroom 2 bath
 ```
 
-Cap at ~15 seed-directed queries per run to avoid burning WebSearch quota. If there are more than 15 seeds, prioritize `prior_status` in `LOVE` / `LGTM` / `Need 2 Go!` first (user's strongest positive signal), then `Maybe`, then `Missing`. Purpose: surface any 2BR/2BA unit currently listed at a building the user has already triaged — the strongest signal we have for a match. These are additive to the 8–12 source-diverse queries, not a replacement.
+Cap at ~15 seed-directed queries per run to avoid burning WebSearch quota. If there are more than 15 seeds, prioritize post-visit signals first (`Fui - $$$ LOVE`, `Fui - LOVE`, `Fui - LGTM` — user has been there in person), then `LOVE` / `LGTM` / `Need 2 Go!`, then `Maybe`, then `Missing`. Purpose: surface any 2BR/2BA unit currently listed at a building the user has already triaged — the strongest signal we have for a match. These are additive to the 8–12 source-diverse queries, not a replacement.
 
 Only collect listings that:
 - Are **exactly 2 bedrooms AND 2 bathrooms** (reject 2BR/1BA, 2BR/1.5BA, 3BR, 1BR)
