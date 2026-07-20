@@ -85,7 +85,7 @@ score = 0
 
 ## Step 4 — Distance estimate
 
-For each candidate, estimate distance + drive time to 500 Tyvola Rd. Use WebSearch with "distance from {ADDRESS} to 500 Tyvola Rd Charlotte" or general knowledge of Charlotte geography. Format: `8.2 mi / 18 min`. Discard anything > 12 miles.
+For each candidate, estimate distance + drive time to 500 Tyvola Rd. Use WebSearch with "distance from {ADDRESS} to 500 Tyvola Rd Charlotte" or general knowledge of Charlotte geography. Format: exactly `8.2 mi / 18 min` — no suffix. **Do NOT append `(est.)`, `(approx)`, `~`, or any similar qualifier** to the value; the column name already means "aproximado". The user hand-fixes distances in the sheet and doesn't want the agent's qualifier polluting the value. Discard anything > 12 miles.
 
 ## Step 5 — Pick top 10 with source diversity
 

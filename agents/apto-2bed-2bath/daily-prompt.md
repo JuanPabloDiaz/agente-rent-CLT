@@ -147,7 +147,7 @@ Seed match is by normalized address (same normalization as Step 1.5).
 
 ## Step 4 — Distance estimate
 
-For each candidate, estimate distance + drive time to 500 Tyvola Rd. Use WebSearch with "distance from {ADDRESS} to 500 Tyvola Rd Charlotte" or general knowledge of Charlotte geography. Format: `6.4 mi / 15 min`. **Discard anything > 8 miles or > 25 min rush-hour drive time** — this is stricter than the shared 12 mi envelope and applies only to this agent.
+For each candidate, estimate distance + drive time to 500 Tyvola Rd. Use WebSearch with "distance from {ADDRESS} to 500 Tyvola Rd Charlotte" or general knowledge of Charlotte geography. Format: exactly `6.4 mi / 15 min` — no suffix. **Do NOT append `(est.)`, `(approx)`, `~`, or any similar qualifier** to the value; the column name already means "aproximado". The user hand-fixes distances in the sheet and doesn't want the agent's qualifier polluting the value. **Discard anything > 8 miles or > 25 min rush-hour drive time** — this is stricter than the shared 12 mi envelope and applies only to this agent.
 
 ## Step 5 — Pick top 10 with source diversity
 
