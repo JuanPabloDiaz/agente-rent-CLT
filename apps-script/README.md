@@ -35,6 +35,28 @@ on their `AGENTS[]` entry; `casa-clt` uses a separate spreadsheet.
 If you previously had a trigger that runs `pollGitHub`, delete it
 (Triggers → trash icon next to that row).
 
+## Email formatting
+
+Every outgoing email (agent daily digests and the weekly seed snapshot)
+is a multipart message:
+
+- **HTML body** — a compact table with per-listing rows, a status
+  summary (new / price-updated / unchanged), and a button linking to the
+  target spreadsheet tab. Mail clients render this by default.
+- **Plain-text body** — the original numbered list plus the JSON block.
+  Parsers (this script for agent drafts; the 2BR agent for seed emails)
+  read from the plain text, so the JSON contract is untouched.
+
+For agent digests the HTML is added by `renderDigestHtml()` in `Code.gs`
+right before `draft.send()`. For the weekly seed snapshot the HTML is
+built by `renderSeedDigestHtml()` and passed as `htmlBody` in the
+`GmailApp.createDraft` call. Both renderers gracefully handle missing
+columns and empty payloads.
+
+To tweak columns or styling, edit `HTML_DIGEST_COLUMNS` /
+`HTML_COLUMN_LABELS` / `AGENT_HEADLINE` / `STATUS_BADGE_COLOR` near
+the top of the "HTML digest rendering" section in `Code.gs`.
+
 ## How it works
 
 - Each agent runs daily, creates ONE Gmail draft addressed to

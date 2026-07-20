@@ -222,6 +222,22 @@ function processAgent(agent, drafts) {
     totalUpdated += updatedFromThisDraft;
     totalUnchanged += unchangedFromThisDraft;
 
+    // Enrich the draft with an HTML body (nice table + spreadsheet link)
+    // before sending. Plain body stays intact — parsers and screen readers
+    // still see the numbered list + JSON block. Any render failure is
+    // logged and non-fatal — we fall back to sending the plain draft.
+    try {
+      const stats = {
+        appended: toAppend.length,
+        updated: updatedFromThisDraft,
+        unchanged: unchangedFromThisDraft,
+      };
+      const htmlBody = renderDigestHtml(agent, payload.rows, stats, tabUrlFor(agent, sheet), payloadDate);
+      draft.update(msg.getTo(), subject, body, { htmlBody: htmlBody });
+    } catch (renderErr) {
+      console.warn('[' + agent.name + '] html enrichment failed for draft ' + draftId + ': ' + renderErr);
+    }
+
     // Send the draft to the inbox configured in the draft's To field.
     let sendStatus = 'sent';
     try {
@@ -469,8 +485,9 @@ function snapshotAptoCltForCrossAgent() {
   const subject = SEED_SUBJECT_PREFIX + ' — ' + seeds.length + ' seeds for ' + date;
   const payload = { version: 2, date: date, seeds: seeds };
   const body = buildSeedBody(seeds.length, date, payload);
+  const htmlBody = renderSeedDigestHtml(seeds, tabUrlFor(SEED_SOURCE, sheet), date);
 
-  const draft = GmailApp.createDraft(SEED_RECIPIENT, subject, body);
+  const draft = GmailApp.createDraft(SEED_RECIPIENT, subject, body, { htmlBody: htmlBody });
   draft.send();
   console.log('snapshotAptoCltForCrossAgent: sent ' + seeds.length + ' seeds');
 }
@@ -506,6 +523,220 @@ function buildSeedBody(nSeeds, date, payload) {
     JSON.stringify(payload, null, 2),
     SEED_DATA_END,
   ].join('\n');
+}
+
+// ===== HTML digest rendering =====
+//
+// Agents write plain-text drafts (numbered list + JSON block). Before we
+// send, we enrich the draft with an HTML body that renders a nice table
+// with a spreadsheet link and per-row detail. The plain text is
+// preserved as the alternative part, so parsers and screen readers still
+// work. The JSON block stays in the plain-text side — we never strip it.
+
+const HTML_DIGEST_COLUMNS = [
+  'NAME',
+  'PRICE',
+  'SCORE',
+  'DISTANCE APROX',
+  'SQF',
+  'BEDS',
+  'BATHS',
+  'TYPE',
+  'YEAR_BUILT',
+  'EST_PITI',
+  'HOA',
+  'DOM',
+  'SOURCE',
+];
+
+const HTML_COLUMN_LABELS = {
+  'DISTANCE APROX': 'DISTANCE',
+  'EST_PITI': 'PITI',
+  'YEAR_BUILT': 'YEAR',
+};
+
+const MONEY_COLUMNS = new Set(['PRICE', 'EST_PITI', 'HOA', 'EST_TAXES']);
+
+const AGENT_HEADLINE = {
+  'apto-clt': '🏠 New 1BR/studio picks',
+  'apto-2bed-2bath': '🛏️ New 2BR/2BA picks',
+  'casa-clt': '🏡 New houses / condos',
+};
+
+const STATUS_BADGE_COLOR = {
+  'LOVE': '#0f9d58',
+  'LGTM': '#0f9d58',
+  'Need 2 Go!': '#1a73e8',
+  'Maybe': '#f9ab00',
+  'Missing': '#5f6368',
+};
+
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function formatMoney(val) {
+  const n = parsePrice(val);
+  if (n === null) return escapeHtml(val);
+  return '$' + n.toLocaleString('en-US');
+}
+
+function extractHostname(url) {
+  if (!url) return '';
+  const m = String(url).match(/^https?:\/\/([^\/?#]+)/i);
+  if (!m) return '';
+  return m[1].replace(/^www\./, '');
+}
+
+function tabUrlFor(agent, sheet) {
+  const base = 'https://docs.google.com/spreadsheets/d/' + agent.sheetId + '/edit';
+  if (sheet) {
+    try { return base + '#gid=' + sheet.getSheetId(); } catch (e) {}
+  }
+  return base;
+}
+
+function renderDigestHtml(agent, rows, stats, tabUrl, date) {
+  if (!rows || rows.length === 0) {
+    return renderEmptyDigestHtml(agent, tabUrl, date);
+  }
+
+  const presentCols = HTML_DIGEST_COLUMNS.filter(function (col) {
+    return rows.some(function (r) {
+      return r[col] !== undefined && r[col] !== null && r[col] !== '';
+    });
+  });
+
+  const thStyle = 'text-align:left;background:#f1f3f4;padding:8px 12px;' +
+    'border-bottom:2px solid #dadce0;font-weight:600;font-size:11px;' +
+    'letter-spacing:.04em;color:#5f6368;text-transform:uppercase;';
+  const tdStyle = 'padding:10px 12px;border-bottom:1px solid #e8eaed;vertical-align:top;';
+
+  const th = presentCols.map(function (c) {
+    const label = HTML_COLUMN_LABELS[c] || c;
+    return '<th style="' + thStyle + '">' + escapeHtml(label) + '</th>';
+  }).join('');
+
+  const tr = rows.map(function (row) {
+    const tds = presentCols.map(function (col) {
+      let val = row[col];
+      if (col === 'NAME' && row.LINK) {
+        return '<td style="' + tdStyle + '">' +
+          '<a href="' + escapeHtml(row.LINK) + '" target="_blank" ' +
+          'style="color:#1a73e8;text-decoration:none;font-weight:500;">' +
+          escapeHtml(val || '(unnamed)') + '</a></td>';
+      }
+      if (MONEY_COLUMNS.has(col)) {
+        return '<td style="' + tdStyle + 'font-variant-numeric:tabular-nums;">' + formatMoney(val) + '</td>';
+      }
+      if (col === 'SCORE') {
+        return '<td style="' + tdStyle + 'font-variant-numeric:tabular-nums;font-weight:500;">' + escapeHtml(val) + '</td>';
+      }
+      return '<td style="' + tdStyle + '">' + escapeHtml(val) + '</td>';
+    }).join('');
+
+    let extra = '';
+    if (row.ADDRESS) {
+      extra += '<tr><td colspan="' + presentCols.length + '" ' +
+        'style="padding:0 12px 6px 12px;color:#5f6368;font-size:12px;">' +
+        escapeHtml(row.ADDRESS) + '</td></tr>';
+    }
+    if (row.NOTES) {
+      extra += '<tr><td colspan="' + presentCols.length + '" ' +
+        'style="padding:0 12px 12px 12px;color:#5f6368;font-size:12px;' +
+        'border-bottom:1px solid #e8eaed;">' + escapeHtml(row.NOTES) + '</td></tr>';
+    }
+    return '<tr>' + tds + '</tr>' + extra;
+  }).join('');
+
+  const statsLine = stats
+    ? '<p style="color:#5f6368;margin:4px 0 12px 0;font-size:13px;">' +
+      stats.appended + ' new · ' + stats.updated + ' price-updated · ' +
+      stats.unchanged + ' unchanged</p>'
+    : '';
+
+  const headline = AGENT_HEADLINE[agent.name] || agent.name;
+
+  return '<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;color:#202124;max-width:960px;margin:0 auto;padding:20px;background:#fff;">' +
+    '<h2 style="margin:0 0 4px 0;font-weight:500;font-size:20px;">' + escapeHtml(headline) + '</h2>' +
+    '<p style="color:#5f6368;margin:0 0 4px 0;font-size:13px;">' + rows.length + ' listings · ' + escapeHtml(date || '') + '</p>' +
+    statsLine +
+    '<p style="margin:8px 0 20px 0;"><a href="' + escapeHtml(tabUrl) +
+    '" style="display:inline-block;background:#1a73e8;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:500;">📊 Open the spreadsheet</a></p>' +
+    '<table style="border-collapse:collapse;width:100%;font-size:14px;">' +
+    '<thead><tr>' + th + '</tr></thead>' +
+    '<tbody>' + tr + '</tbody>' +
+    '</table>' +
+    '</body></html>';
+}
+
+function renderEmptyDigestHtml(agent, tabUrl, date) {
+  const headline = AGENT_HEADLINE[agent.name] || agent.name;
+  return '<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;color:#202124;max-width:960px;margin:0 auto;padding:20px;background:#fff;">' +
+    '<h2 style="margin:0 0 4px 0;font-weight:500;font-size:20px;">' + escapeHtml(headline) + '</h2>' +
+    '<p style="color:#5f6368;margin:0 0 12px 0;font-size:13px;">No new listings today · ' + escapeHtml(date || '') + '</p>' +
+    '<p style="margin:8px 0;"><a href="' + escapeHtml(tabUrl) +
+    '" style="color:#1a73e8;text-decoration:none;">📊 Open the spreadsheet →</a></p>' +
+    '</body></html>';
+}
+
+function renderSeedDigestHtml(seeds, tabUrl, date) {
+  const thStyle = 'text-align:left;background:#f1f3f4;padding:8px 12px;' +
+    'border-bottom:2px solid #dadce0;font-weight:600;font-size:11px;' +
+    'letter-spacing:.04em;color:#5f6368;text-transform:uppercase;';
+  const tdStyle = 'padding:10px 12px;border-bottom:1px solid #e8eaed;vertical-align:top;';
+
+  const tr = seeds.map(function (s) {
+    const badgeColor = STATUS_BADGE_COLOR[s.prior_status] || '#5f6368';
+    const badge = '<span style="background:' + badgeColor +
+      ';color:#fff;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;">' +
+      escapeHtml(s.prior_status) + '</span>';
+    const nameCell = s.source_link
+      ? '<a href="' + escapeHtml(s.source_link) + '" target="_blank" ' +
+        'style="color:#1a73e8;text-decoration:none;font-weight:500;">' +
+        escapeHtml(s.name || '(unnamed)') + '</a>'
+      : escapeHtml(s.name || '(unnamed)');
+    const priceCell = s.prior_price
+      ? formatMoney(s.prior_price) + '<span style="color:#5f6368;font-size:11px;"> /mo</span>'
+      : '';
+
+    let extra = '';
+    if (s.address) {
+      extra += '<tr><td colspan="4" style="padding:0 12px 6px 12px;color:#5f6368;font-size:12px;">' +
+        escapeHtml(s.address) + '</td></tr>';
+    }
+    if (s.prior_notes) {
+      extra += '<tr><td colspan="4" style="padding:0 12px 12px 12px;color:#5f6368;font-size:12px;border-bottom:1px solid #e8eaed;">' +
+        escapeHtml(s.prior_notes) + '</td></tr>';
+    }
+
+    return '<tr>' +
+      '<td style="' + tdStyle + '">' + nameCell + '</td>' +
+      '<td style="' + tdStyle + 'font-variant-numeric:tabular-nums;">' + priceCell + '</td>' +
+      '<td style="' + tdStyle + '">' + badge + '</td>' +
+      '<td style="' + tdStyle + 'color:#5f6368;font-size:12px;">' + escapeHtml(extractHostname(s.source_link)) + '</td>' +
+      '</tr>' + extra;
+  }).join('');
+
+  return '<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;color:#202124;max-width:960px;margin:0 auto;padding:20px;background:#fff;">' +
+    '<h2 style="margin:0 0 4px 0;font-weight:500;font-size:20px;">🔗 Seeds for the 2BR agent</h2>' +
+    '<p style="color:#5f6368;margin:0 0 12px 0;font-size:13px;">' + seeds.length +
+    ' buildings flagged for 2BR reconsideration · ' + escapeHtml(date) + '</p>' +
+    '<p style="margin:8px 0 20px 0;"><a href="' + escapeHtml(tabUrl) +
+    '" style="display:inline-block;background:#1a73e8;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:500;">📊 Open the 1 bed tab</a></p>' +
+    '<table style="border-collapse:collapse;width:100%;font-size:14px;">' +
+    '<thead><tr>' +
+    '<th style="' + thStyle + '">Building</th>' +
+    '<th style="' + thStyle + '">1BR price</th>' +
+    '<th style="' + thStyle + '">Status</th>' +
+    '<th style="' + thStyle + '">Source</th>' +
+    '</tr></thead>' +
+    '<tbody>' + tr + '</tbody>' +
+    '</table>' +
+    '</body></html>';
 }
 
 // ===== Manual utilities (run from the editor) =====
