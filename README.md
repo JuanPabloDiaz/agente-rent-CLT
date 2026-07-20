@@ -44,7 +44,7 @@ Daily agent that searches for **studios or 1-bedroom** apartments to rent for th
   - [`agents/apto-clt/daily-prompt.md`](./agents/apto-clt/daily-prompt.md) — operational prompt for the daily run
   - [`agents/apto-clt/en-agente.md`](./agents/apto-clt/en-agente.md) / [`agents/apto-clt/es-agente.md`](./agents/apto-clt/es-agente.md) — full criteria (English / Spanish)
 - **Sheet:** `1 bed` tab of the [shared rentals spreadsheet](https://docs.google.com/spreadsheets/d/1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI/edit?usp=sharing)
-- **Subject prefix:** `🏠 APTO-CLT daily —`
+- **Subject prefix:** `APTO-CLT daily —`
 - **Data markers:** `<<<APTO-CLT-DATA-START>>>` / `<<<APTO-CLT-DATA-END>>>`
 
 ### 2. Apartment to rent — 2BR/2BA — `apto-2bed-2bath` (active)
@@ -59,7 +59,7 @@ Daily agent that searches for strict 2-bedroom / 2-bathroom apartments to rent. 
   - [`agents/apto-2bed-2bath/daily-prompt.md`](./agents/apto-2bed-2bath/daily-prompt.md) — operational prompt
   - [`agents/apto-2bed-2bath/en-agente.md`](./agents/apto-2bed-2bath/en-agente.md) / [`agents/apto-2bed-2bath/es-agente.md`](./agents/apto-2bed-2bath/es-agente.md) — full criteria (English / Spanish)
 - **Sheet:** `apto-2bed-2bath` tab of the [shared rentals spreadsheet](https://docs.google.com/spreadsheets/d/1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI/edit) (same spreadsheet as `apto-clt`, different tab; the two agents are pinned to `1 bed` and `apto-2bed-2bath` respectively via `sheetName` in `Code.gs`).
-- **Subject prefix:** `🛏️ APTO-2BR2BA daily —`
+- **Subject prefix:** `APTO-2BR2BA daily —`
 - **Data markers:** `<<<APTO-2BR2BA-DATA-START>>>` / `<<<APTO-2BR2BA-DATA-END>>>`
 
 Dedup and price-change updates are per-tab, so `apto-clt` and `apto-2bed-2bath` never collide even though they live in the same spreadsheet.
@@ -73,7 +73,7 @@ Daily agent that searches for houses, townhouses, and condos to buy in Charlotte
   - [`agents/casa-clt/daily-prompt.md`](./agents/casa-clt/daily-prompt.md) — operational prompt
   - [`agents/casa-clt/en-agente.md`](./agents/casa-clt/en-agente.md) — full criteria, contains `TODO:` placeholders for budget, down payment, PITI cap, year-built floor, HOA ceiling, property type ranking
 - **Sheet:** [casa-clt](https://docs.google.com/spreadsheets/d/1nVwG09Y9vK3BVTd9XyvLzPILqFBA5ykZdMDgxAKTTss/edit?usp=sharing) — make sure row 1 has the headers listed in `daily-prompt.md` "Sheet column schema" (at minimum, a `LINK` column is required for dedup)
-- **Subject prefix:** `🏡 CASA-CLT daily —`
+- **Subject prefix:** `CASA-CLT daily —`
 - **Data markers:** `<<<CASA-CLT-DATA-START>>>` / `<<<CASA-CLT-DATA-END>>>`
 
 **Before this agent produces useful output, the user must still:**

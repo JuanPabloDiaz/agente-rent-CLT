@@ -62,9 +62,9 @@ the top of the "HTML digest rendering" section in `Code.gs`.
 - Each agent runs daily, creates ONE Gmail draft addressed to
   `jpdiaz0@outlook.com` (Juan's review inbox).
 - Per-agent identifying markers (subject prefix and data markers):
-  - **apto-clt**: subject starts with `🏠 APTO-CLT daily —`, payload
+  - **apto-clt**: subject starts with `APTO-CLT daily —`, payload
     delimited by `<<<APTO-CLT-DATA-START>>>` / `<<<APTO-CLT-DATA-END>>>`
-  - **casa-clt**: subject starts with `🏡 CASA-CLT daily —`, payload
+  - **casa-clt**: subject starts with `CASA-CLT daily —`, payload
     delimited by `<<<CASA-CLT-DATA-START>>>` / `<<<CASA-CLT-DATA-END>>>`
 - Draft body contains a human-readable digest **and** a machine-readable
   JSON block in the agent's markers:
@@ -153,7 +153,7 @@ agent's `subjectPrefix`, so `pollGmailDrafts` ignores it.
   - blank — no STATUS at all, treat as noise
 - Sends a Gmail message to `SEED_RECIPIENT` (default `jpdiaz0@outlook.com`)
   with:
-  - Subject: `🔗 APTO-CLT-SEEDS weekly — {N} seeds for {YYYY-MM-DD}`
+  - Subject: `APTO-CLT-SEEDS weekly — {N} seeds for {YYYY-MM-DD}`
   - Body: short human summary + a JSON block (payload version `2`,
     single `seeds` array) bracketed by `<<<APTO-CLT-SEEDS-START>>>` /
     `<<<APTO-CLT-SEEDS-END>>>` (parsed by the 2BR agent via Gmail MCP

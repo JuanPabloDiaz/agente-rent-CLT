@@ -40,14 +40,14 @@ const AGENTS = [
     name: 'apto-clt',
     sheetId: '1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI',
     sheetName: '1 bed',
-    subjectPrefix: '🏠 APTO-CLT daily',
+    subjectPrefix: 'APTO-CLT daily',
     dataStart: '<<<APTO-CLT-DATA-START>>>',
     dataEnd: '<<<APTO-CLT-DATA-END>>>',
   },
   {
     name: 'casa-clt',
     sheetId: '1nVwG09Y9vK3BVTd9XyvLzPILqFBA5ykZdMDgxAKTTss',
-    subjectPrefix: '🏡 CASA-CLT daily',
+    subjectPrefix: 'CASA-CLT daily',
     dataStart: '<<<CASA-CLT-DATA-START>>>',
     dataEnd: '<<<CASA-CLT-DATA-END>>>',
   },
@@ -56,7 +56,7 @@ const AGENTS = [
     // Shares the apto-clt spreadsheet; rows land on the 'apto-2bed-2bath' tab.
     sheetId: '1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI',
     sheetName: 'apto-2bed-2bath',
-    subjectPrefix: '🛏️ APTO-2BR2BA daily',
+    subjectPrefix: 'APTO-2BR2BA daily',
     dataStart: '<<<APTO-2BR2BA-DATA-START>>>',
     dataEnd: '<<<APTO-2BR2BA-DATA-END>>>',
   },
@@ -105,7 +105,7 @@ const SEED_SOURCE = {
 
 // Gmail delivery for the seed snapshot.
 const SEED_RECIPIENT = 'jpdiaz0@outlook.com';
-const SEED_SUBJECT_PREFIX = '🔗 APTO-CLT-SEEDS weekly';
+const SEED_SUBJECT_PREFIX = 'APTO-CLT-SEEDS weekly';
 const SEED_DATA_START = '<<<APTO-CLT-SEEDS-START>>>';
 const SEED_DATA_END = '<<<APTO-CLT-SEEDS-END>>>';
 
@@ -161,7 +161,7 @@ function processAgent(agent, drafts) {
 
     const msg = draft.getMessage();
     const subject = msg.getSubject() || '';
-    if (!subject.startsWith(agent.subjectPrefix)) continue;
+    if (!subjectMatchesPrefix(subject, agent.subjectPrefix)) continue;
 
     totalDraftsMatched++;
     const body = msg.getPlainBody();
@@ -414,6 +414,17 @@ function readHeaderMap(sheet) {
   return map;
 }
 
+// Match a subject against a prefix while ignoring any leading non-ASCII
+// decoration (emoji + separator whitespace). Lets us drop emoji from
+// subjectPrefix values without stranding older drafts that still have
+// emoji subjects. Both new and old drafts route to the right agent.
+function subjectMatchesPrefix(subject, prefix) {
+  const s = String(subject || '');
+  if (s.indexOf(prefix) === 0) return true;
+  const stripped = s.replace(/^[^\x20-\x7E]+\s*/, '');
+  return stripped.indexOf(prefix) === 0;
+}
+
 function normalizeAddress(addr) {
   if (!addr) return '';
   return String(addr)
@@ -558,9 +569,9 @@ const HTML_COLUMN_LABELS = {
 const MONEY_COLUMNS = new Set(['PRICE', 'EST_PITI', 'HOA', 'EST_TAXES']);
 
 const AGENT_HEADLINE = {
-  'apto-clt': '🏠 New 1BR/studio picks',
-  'apto-2bed-2bath': '🛏️ New 2BR/2BA picks',
-  'casa-clt': '🏡 New houses / condos',
+  'apto-clt': 'New 1BR/studio picks',
+  'apto-2bed-2bath': 'New 2BR/2BA picks',
+  'casa-clt': 'New houses / condos',
 };
 
 const STATUS_BADGE_COLOR = {
@@ -665,7 +676,7 @@ function renderDigestHtml(agent, rows, stats, tabUrl, date) {
     '<p style="color:#5f6368;margin:0 0 4px 0;font-size:13px;">' + rows.length + ' listings · ' + escapeHtml(date || '') + '</p>' +
     statsLine +
     '<p style="margin:8px 0 20px 0;"><a href="' + escapeHtml(tabUrl) +
-    '" style="display:inline-block;background:#1a73e8;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:500;">📊 Open the spreadsheet</a></p>' +
+    '" style="display:inline-block;background:#1a73e8;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:500;">Open the spreadsheet</a></p>' +
     '<table style="border-collapse:collapse;width:100%;font-size:14px;">' +
     '<thead><tr>' + th + '</tr></thead>' +
     '<tbody>' + tr + '</tbody>' +
@@ -679,7 +690,7 @@ function renderEmptyDigestHtml(agent, tabUrl, date) {
     '<h2 style="margin:0 0 4px 0;font-weight:500;font-size:20px;">' + escapeHtml(headline) + '</h2>' +
     '<p style="color:#5f6368;margin:0 0 12px 0;font-size:13px;">No new listings today · ' + escapeHtml(date || '') + '</p>' +
     '<p style="margin:8px 0;"><a href="' + escapeHtml(tabUrl) +
-    '" style="color:#1a73e8;text-decoration:none;">📊 Open the spreadsheet →</a></p>' +
+    '" style="color:#1a73e8;text-decoration:none;">Open the spreadsheet →</a></p>' +
     '</body></html>';
 }
 
@@ -722,11 +733,11 @@ function renderSeedDigestHtml(seeds, tabUrl, date) {
   }).join('');
 
   return '<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;color:#202124;max-width:960px;margin:0 auto;padding:20px;background:#fff;">' +
-    '<h2 style="margin:0 0 4px 0;font-weight:500;font-size:20px;">🔗 Seeds for the 2BR agent</h2>' +
+    '<h2 style="margin:0 0 4px 0;font-weight:500;font-size:20px;">Seeds for the 2BR agent</h2>' +
     '<p style="color:#5f6368;margin:0 0 12px 0;font-size:13px;">' + seeds.length +
     ' buildings flagged for 2BR reconsideration · ' + escapeHtml(date) + '</p>' +
     '<p style="margin:8px 0 20px 0;"><a href="' + escapeHtml(tabUrl) +
-    '" style="display:inline-block;background:#1a73e8;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:500;">📊 Open the 1 bed tab</a></p>' +
+    '" style="display:inline-block;background:#1a73e8;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:500;">Open the 1 bed tab</a></p>' +
     '<table style="border-collapse:collapse;width:100%;font-size:14px;">' +
     '<thead><tr>' +
     '<th style="' + thStyle + '">Building</th>' +

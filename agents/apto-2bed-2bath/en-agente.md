@@ -96,7 +96,7 @@ doesn't allow no-pet households, it's not a problem, but mention it.
 <seed_system>
 This agent reuses prior human triage from the sibling `apto-clt` (1BR)
 sheet. A weekly Apps Script snapshot publishes a filtered seed list to
-Gmail (subject `🔗 APTO-CLT-SEEDS weekly`) containing every building the
+Gmail (subject `APTO-CLT-SEEDS weekly`) containing every building the
 user has flagged for 2BR reconsideration — STATUS in
 `LOVE` / `LGTM` / `Need 2 Go!` / `Maybe` / `Missing`. All `NO - *`
 rejections (`NO - $$$ CARO`, `NO - Far`, `NO - FEO/UNSAFE`,
