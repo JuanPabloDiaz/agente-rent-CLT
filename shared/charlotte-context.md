@@ -82,6 +82,7 @@ drive time ≤ 30 min per listing:
 
 - **28105** — Matthews
 - **28227** — Mint Hill
+- **28270** — East Charlotte between Providence Rd and Matthews (~8–10 mi from 28217, borderline)
 
 ### Explicit avoid ZIPs — reject on sight
 
