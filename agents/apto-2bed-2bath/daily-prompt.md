@@ -35,7 +35,7 @@ Skip any prior thread that doesn't parse cleanly — log it in NOTES of today's 
 
 ## Step 1.5 — Load 1BR seeds (prior triage from the apto-clt sheet)
 
-Apps Script publishes a weekly snapshot of the sibling `apto-clt` (1BR) sheet — filtered to rows the user has actually triaged as reconsiderable for 2BR — to Gmail. This is prior human triage: reuse it to bias today's search.
+Apps Script publishes a weekly snapshot of the sibling `apto-clt` (1BR) sheet — filtered to rows the user has flagged as reconsiderable for 2BR — to Gmail. This is prior human triage: reuse it to bias today's search.
 
 Use the Gmail MCP `search_threads` tool:
 
@@ -43,20 +43,38 @@ Use the Gmail MCP `search_threads` tool:
 query: "subject:APTO-CLT-SEEDS weekly"
 ```
 
-Fetch the most recent match (there's one per week). Extract the JSON block between `<<<APTO-CLT-SEEDS-START>>>` and `<<<APTO-CLT-SEEDS-END>>>`. Parse into two lists:
+Fetch the most recent match (there's one per week). Extract the JSON block between `<<<APTO-CLT-SEEDS-START>>>` and `<<<APTO-CLT-SEEDS-END>>>`.
 
-- `price_rejects` — buildings the user marked `NO - $$$ CARO` on the 1BR sheet. Rejected against the solo $1,400 budget — on the shared $1,500 2BR budget the same building's 2BR/2BA unit may be viable. Strong reconsideration signal.
-- `liked` — buildings the user marked `LOVE` / `LGTM` / `Need 2 Go!` / `Maybe`. Already endorsed for 1BR — a 2BR/2BA unit at the same building beats a cold discovery.
+Expected schema (`version === 2`):
 
-Each seed record has: `name`, `address`, `prior_price`, `prior_status`, `prior_notes`, `source_link`.
+```json
+{
+  "version": 2,
+  "date": "YYYY-MM-DD",
+  "seeds": [
+    {
+      "name": "Building name",
+      "address": "Full street address",
+      "prior_price": 1350,
+      "prior_status": "Maybe",
+      "prior_notes": "...",
+      "source_link": "https://..."
+    },
+    ...
+  ]
+}
+```
 
-Build two in-memory structures for the rest of the run:
+`prior_status` will be one of `LOVE`, `LGTM`, `Need 2 Go!`, `Maybe`, `Missing`. All `NO - *` STATUS values were filtered out by Apps Script (user has already discarded those buildings for reasons that don't change with unit shape). Every seed record is a building the user wants revisited for a 2BR/2BA unit.
 
-- `seed_buildings` — union of `{name, address}` pairs from both lists (used in Step 2 for targeted queries).
-- `seed_by_address` — map from **normalized** address (lowercase, strip `unit`/`apt`/`suite`/`#…`, collapse whitespace) → seed record (used in Step 3 for score boost and Step 5 for NOTES).
+**Backwards compatibility:** if `version === 1` (old snapshot with `price_rejects` + `liked` keys), synthesize `seeds = [...price_rejects, ...liked]` and log a NOTES entry `stale seed snapshot v1 — ask user to re-run runSnapshotOnce in Apps Script`.
+
+Build one in-memory structure for the rest of the run:
+
+- `seed_by_address` — map from **normalized** address (lowercase, strip `unit`/`apt`/`suite`/`#…`, collapse whitespace) → seed record. Used in Step 2 to iterate seed buildings for targeted queries and in Step 3 for score boost and Step 5 for NOTES.
 
 Robustness:
-- If no seed thread is found, log a NOTES entry in today's digest (`seed snapshot missing — proceeding cold`) and proceed with empty seed structures. Do not abort — the agent must remain functional if the weekly snapshot fails.
+- If no seed thread is found, log a NOTES entry (`seed snapshot missing — proceeding cold`) and proceed with an empty `seed_by_address`. Do not abort — the agent must remain functional if the weekly snapshot fails.
 - If the JSON block is present but unparseable, same treatment: log and proceed cold.
 
 ## Step 2 — Search (broad, source-diverse)
@@ -85,13 +103,13 @@ Suggested query mix (8–12 total searches per run):
 
 **Seed-directed queries (in addition to the source-diverse queries above):**
 
-For each building in `seed_buildings` from Step 1.5, issue one targeted query:
+For each seed record from Step 1.5, issue one targeted query:
 
 ```
 "{building name}" Charlotte 2 bedroom 2 bath
 ```
 
-Cap at ~15 seed-directed queries per run to avoid burning WebSearch quota. Prioritize `price_rejects` first (highest reconsideration value), then `liked`. Purpose: surface any 2BR/2BA unit currently listed at a building the user has already triaged — the strongest signal we have for a match. These are additive to the 8–12 source-diverse queries, not a replacement.
+Cap at ~15 seed-directed queries per run to avoid burning WebSearch quota. If there are more than 15 seeds, prioritize `prior_status` in `LOVE` / `LGTM` / `Need 2 Go!` first (user's strongest positive signal), then `Maybe`, then `Missing`. Purpose: surface any 2BR/2BA unit currently listed at a building the user has already triaged — the strongest signal we have for a match. These are additive to the 8–12 source-diverse queries, not a replacement.
 
 Only collect listings that:
 - Are **exactly 2 bedrooms AND 2 bathrooms** (reject 2BR/1BA, 2BR/1.5BA, 3BR, 1BR)
@@ -115,14 +133,12 @@ score = 0
 + 5  if hard flooring confirmed
 + 5  if on-site parking confirmed
 + 5  if pool OR gym in nice-to-haves
-+ 15 if seed_by_address hit AND prior_status == "NO - $$$ CARO"
-      (user liked the building for 1BR but priced out on solo budget)
-+ 20 if seed_by_address hit AND prior_status in {"LOVE", "LGTM", "Need 2 Go!", "Maybe"}
-      (user already endorsed the building for 1BR)
++ 20 if seed_by_address hit
+      (user has flagged this building for 2BR reconsideration in the 1BR sheet)
 - 10 if missing critical info (mark STATUS=Missing)
 ```
 
-Only one seed boost applies per candidate — pick the larger one if both somehow match. Match by normalized address (same normalization as Step 1.5).
+Seed match is by normalized address (same normalization as Step 1.5).
 
 ## Step 4 — Distance estimate
 

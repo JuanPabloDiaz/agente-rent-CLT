@@ -105,6 +105,9 @@ does nothing harmful.
   `appendRows` still dedupes by LINK/ADDRESS against the Sheet)
 - `runSnapshotOnce()` — manually trigger the weekly seed snapshot (see
   next section)
+- `showAptoCltStatusHistogram()` — log the count of each distinct
+  STATUS value in the `1 bed` tab plus which values `SEED_INCLUDE`
+  covers. Use to debug unexpected snapshot counts.
 
 ## Weekly seed snapshot (apto-clt → apto-2bed-2bath)
 
@@ -116,19 +119,33 @@ agent's `subjectPrefix`, so `pollGmailDrafts` ignores it.
 **Contract:**
 - Reads the `1 bed` tab of the apto-clt spreadsheet (config in
   `SEED_SOURCE` at top of `Code.gs`).
-- Filters rows by STATUS into two buckets:
-  - `price_rejects` — STATUS in `SEED_INCLUDE_PRICE_REJECTS`
-    (default: `NO - $$$ CARO`)
-  - `liked` — STATUS in `SEED_INCLUDE_LIKED`
-    (default: `LOVE`, `LGTM`, `Need 2 Go!`, `Maybe`)
-- Everything else is dropped (see comments in `Code.gs` for rationale
-  on `Missing`, `NO - FEO/UNSAFE`, `NO - Far`, `NO - Sin Laundry`).
+- Filters rows by STATUS: only rows whose STATUS is in `SEED_INCLUDE`
+  (default: `LOVE`, `LGTM`, `Need 2 Go!`, `Maybe`, `Missing`) become
+  seeds. Everything else is dropped, including:
+  - `NO - $$$ CARO` — user has already moved shared-budget-viable rows
+    out of this bucket into `Maybe` / `Missing` / etc. during manual
+    triage. Rows that remain here are genuinely too expensive.
+  - `NO - FEO/UNSAFE` — quality/safety, doesn't change with unit shape
+  - `NO - Far` — 2BR agent's 8 mi cap already excludes; double-safety
+  - `NO - Sin Laundry` — 2BR agent also requires in-unit laundry
+  - blank — no STATUS at all, treat as noise
 - Sends a Gmail message to `SEED_RECIPIENT` (default `jpdiaz0@outlook.com`)
   with:
-  - Subject: `🔗 APTO-CLT-SEEDS weekly — {N_price} price-rejects + {N_liked} liked buildings for {YYYY-MM-DD}`
-  - Body: short human summary + a JSON block bracketed by
-    `<<<APTO-CLT-SEEDS-START>>>` / `<<<APTO-CLT-SEEDS-END>>>` (parsed
-    by the 2BR agent via Gmail MCP `search_threads` on every daily run).
+  - Subject: `🔗 APTO-CLT-SEEDS weekly — {N} seeds for {YYYY-MM-DD}`
+  - Body: short human summary + a JSON block (payload version `2`,
+    single `seeds` array) bracketed by `<<<APTO-CLT-SEEDS-START>>>` /
+    `<<<APTO-CLT-SEEDS-END>>>` (parsed by the 2BR agent via Gmail MCP
+    `search_threads` on every daily run).
+
+Payload shape:
+
+```json
+{ "version": 2, "date": "YYYY-MM-DD", "seeds": [
+  { "name": "...", "address": "...", "prior_price": 1350,
+    "prior_status": "Maybe", "prior_notes": "...",
+    "source_link": "https://..." }
+]}
+```
 
 **One-time setup for the weekly trigger:**
 
@@ -140,13 +157,14 @@ agent's `subjectPrefix`, so `pollGmailDrafts` ignores it.
 5. Save. No additional auth prompts if `pollGmailDrafts` is already
    authorized (same scopes).
 
-**Tweaking the filter mapping:** edit `SEED_INCLUDE_PRICE_REJECTS` and
-`SEED_INCLUDE_LIKED` at the top of `Code.gs`. The comment block above
-those sets documents why each STATUS value is or isn't included.
+**Tweaking the filter mapping:** edit `SEED_INCLUDE` at the top of
+`Code.gs`. The comment block above the set documents why each STATUS
+value is or isn't included.
 
 **Testing without waiting a week:** run `runSnapshotOnce()` in the
 editor. Check Gmail Sent for the subject line above; verify the JSON
-block parses.
+block parses. Use `showAptoCltStatusHistogram()` first to sanity-check
+STATUS distribution before running the snapshot.
 
 ## Adding a new agent
 

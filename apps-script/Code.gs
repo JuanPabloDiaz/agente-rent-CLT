@@ -73,21 +73,28 @@ const REFRESH_ON_UPDATE = ['PRICE', 'SCORE', 'SOURCE', 'DISTANCE APROX', 'LINK',
 // ===== Cross-agent seed snapshot config =====
 //
 // The `apto-2bed-2bath` agent uses a filtered snapshot of the `apto-clt`
-// (1BR) sheet as prior-triage seed input. STATUS values landing in these
-// two sets flow through; everything else is dropped.
+// (1BR) sheet as prior-triage seed input. STATUS values in this set flow
+// through; everything else is dropped.
 //
-// Rationale for the mapping (edit these sets to tweak):
-//   'NO - $$$ CARO'    → price rejection on solo $1,400 budget; shared
-//                        $1,500 2BR budget may make the same building viable.
-//   LOVE/LGTM/Need 2 Go!/Maybe → user already endorsed the building.
-// Explicitly excluded (documented, not filtered against):
-//   'Missing'          — un-triaged, no signal
+// The user does the actual triage in the sheet — moving rows into
+// LOVE/LGTM/Need 2 Go!/Maybe/Missing means "reconsider for 2BR". This
+// filter just excludes the categorically rejected records.
+//
+// Rationale for the exclusions (documented, not filtered against):
+//   'NO - $$$ CARO'    — post-triage: user moved shared-budget-viable
+//                        rows out of this bucket into Maybe/Missing/etc.
+//                        What stays here is genuinely too expensive.
 //   'NO - FEO/UNSAFE'  — quality/safety, doesn't change with unit shape
-//   'NO - Far'         — 8 mi cap already excludes; double-safety
+//   'NO - Far'         — 2BR agent's 8 mi cap already excludes; double-safety
 //   'NO - Sin Laundry' — 2BR agent also requires in-unit laundry
-//   ''                 — blank == un-triaged
-const SEED_INCLUDE_PRICE_REJECTS = new Set(['NO - $$$ CARO']);
-const SEED_INCLUDE_LIKED = new Set(['LOVE', 'LGTM', 'Need 2 Go!', 'Maybe']);
+//   ''                 — blank rows have no STATUS at all — treat as noise
+const SEED_INCLUDE = new Set([
+  'LOVE',
+  'LGTM',
+  'Need 2 Go!',
+  'Maybe',
+  'Missing',
+]);
 
 // Source config for the snapshot (mirrors the apto-clt entry in AGENTS[]).
 const SEED_SOURCE = {
@@ -429,9 +436,9 @@ function extractPayload(body, agent) {
 // ===== Weekly seed snapshot (apto-clt → apto-2bed-2bath) =====
 //
 // Reads the `1 bed` tab of the apto-clt spreadsheet, filters rows by
-// STATUS (see SEED_INCLUDE_* sets at the top of the file), and emits
-// a Gmail message with a marker block that the 2BR agent parses on its
-// daily run.
+// STATUS (see SEED_INCLUDE at the top of the file), and emits a Gmail
+// message with a marker block that the 2BR agent parses on its daily
+// run.
 //
 // The message subject deliberately does NOT match any agent's
 // `subjectPrefix`, so `pollGmailDrafts` skips it — this is a one-way
@@ -447,31 +454,25 @@ function snapshotAptoCltForCrossAgent() {
   }
 
   const lastRow = sheet.getLastRow();
-  const priceRejects = [];
-  const liked = [];
+  const seeds = [];
   if (lastRow >= 2) {
     const lastCol = sheet.getLastColumn();
     const rows = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
     rows.forEach(rowVals => {
       const status = String(rowVals[headerMap['STATUS']] || '').trim();
-      const bucket = SEED_INCLUDE_PRICE_REJECTS.has(status)
-        ? priceRejects
-        : (SEED_INCLUDE_LIKED.has(status) ? liked : null);
-      if (!bucket) return;
-      bucket.push(buildSeedRecord(rowVals, headerMap, status));
+      if (!SEED_INCLUDE.has(status)) return;
+      seeds.push(buildSeedRecord(rowVals, headerMap, status));
     });
   }
 
   const date = todayISO();
-  const subject = SEED_SUBJECT_PREFIX + ' — ' + priceRejects.length +
-    ' price-rejects + ' + liked.length + ' liked buildings for ' + date;
-  const payload = { version: 1, date: date, price_rejects: priceRejects, liked: liked };
-  const body = buildSeedBody(priceRejects.length, liked.length, date, payload);
+  const subject = SEED_SUBJECT_PREFIX + ' — ' + seeds.length + ' seeds for ' + date;
+  const payload = { version: 2, date: date, seeds: seeds };
+  const body = buildSeedBody(seeds.length, date, payload);
 
   const draft = GmailApp.createDraft(SEED_RECIPIENT, subject, body);
   draft.send();
-  console.log('snapshotAptoCltForCrossAgent: sent ' + priceRejects.length +
-    ' price-rejects + ' + liked.length + ' liked seeds');
+  console.log('snapshotAptoCltForCrossAgent: sent ' + seeds.length + ' seeds');
 }
 
 function buildSeedRecord(rowVals, headerMap, status) {
@@ -490,12 +491,12 @@ function buildSeedRecord(rowVals, headerMap, status) {
   };
 }
 
-function buildSeedBody(nPrice, nLiked, date, payload) {
+function buildSeedBody(nSeeds, date, payload) {
   return [
     'Weekly seed snapshot of the apto-clt 1BR sheet for the apto-2bed-2bath agent.',
     '',
-    'price_rejects (' + nPrice + '): buildings rejected against solo $1,400 budget.',
-    'liked (' + nLiked + '): buildings marked LOVE / LGTM / Need 2 Go! / Maybe.',
+    nSeeds + ' buildings the user flagged for 2BR reconsideration',
+    '(STATUS in {LOVE, LGTM, Need 2 Go!, Maybe, Missing}; all NO-* excluded).',
     '',
     'The 2BR agent reads the JSON block below on every daily run to bias searches',
     'toward these buildings and score-boost matching 2BR/2BA candidates.',
@@ -515,6 +516,35 @@ function runOnce() {
 
 function runSnapshotOnce() {
   snapshotAptoCltForCrossAgent();
+}
+
+// Diagnostic: log each distinct STATUS value found in the seed source
+// tab with its row count. Use this when the snapshot returns unexpected
+// counts — it reveals whether the sheet actually contains the STATUS
+// strings that SEED_INCLUDE filters against.
+function showAptoCltStatusHistogram() {
+  const sheet = openAgentSheet(SEED_SOURCE);
+  const headerMap = readHeaderMap(sheet);
+  if (headerMap['STATUS'] === undefined) {
+    console.log('Sheet has no STATUS column.');
+    return;
+  }
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) { console.log('Sheet has no data rows.'); return; }
+  const rows = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+  const counts = {};
+  rows.forEach(r => {
+    const raw = r[headerMap['STATUS']];
+    const status = raw === null || raw === undefined ? '' : String(raw);
+    const key = status === '' ? '(blank)' : JSON.stringify(status);
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  console.log('STATUS histogram for tab "' + SEED_SOURCE.sheetName + '" (' + (lastRow - 1) + ' rows):');
+  Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([k, v]) => console.log('  ' + v + '\t' + k));
+  console.log('');
+  console.log('Currently included as seeds: ' + JSON.stringify([...SEED_INCLUDE]));
 }
 
 function resetProcessedDrafts() {
