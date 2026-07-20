@@ -55,7 +55,8 @@ Suggested query mix (8–12 total searches per run):
 Only collect listings that:
 - Have a direct URL to the specific listing (not a search page)
 - Are currently active (not pending, contingent, off-market, or sold)
-- Are in or near preferred neighborhoods (not in avoid list)
+- **ZIP is in the whitelist defined in `shared/charlotte-context.md` (Preferred, Edge-case, or Verify-commute sets — casa-clt uses the shared 12 mi / 30 min envelope, so Verify-commute ZIPs are acceptable if drive time confirms).** Reject any ZIP in the explicit avoid set regardless of neighborhood name. Apply this filter BEFORE distance calc.
+- Are in or near preferred neighborhoods (fallback check if ZIP is not visible in the listing)
 - Are not in `seen_links` or `seen_addresses`
 
 Collect **at least 20 raw candidates** before filtering, so Step 5's diversity rule has room to work.

@@ -58,7 +58,8 @@ Suggested query mix (8–12 total searches per run):
 Only collect listings that:
 - Have a direct URL to the specific listing (not a search page)
 - Price is at or under $1,500 (slight buffer above $1,400 ceiling for review)
-- Are in or near preferred neighborhoods (not in avoid list)
+- **ZIP is in the whitelist defined in `shared/charlotte-context.md` (Preferred, Edge-case, or Verify-commute sets — the 1BR agent may accept Verify-commute ZIPs 28105 / 28227 if drive time to 500 Tyvola Rd is ≤ 30 min).** Apply this filter BEFORE distance calc — saves quota. If the ZIP falls in the explicit avoid set, reject regardless of neighborhood name.
+- Are in or near preferred neighborhoods (fallback check if ZIP is not visible in the listing)
 - Are not in `seen_links` or `seen_addresses`
 
 Collect **at least 20 raw candidates** before filtering, so Step 5's diversity rule has room to work.

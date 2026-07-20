@@ -119,7 +119,8 @@ Only collect listings that:
 - Are **exactly 2 bedrooms AND 2 bathrooms** (reject 2BR/1BA, 2BR/1.5BA, 3BR, 1BR)
 - Have a direct URL to the specific listing (not a search page)
 - Price is at or under $1,600 (slight buffer above $1,500 ceiling for review)
-- Are in or near preferred neighborhoods (not in avoid list)
+- **ZIP is in the Preferred or Edge-case set defined in `shared/charlotte-context.md`.** The 2BR agent must REJECT Verify-commute ZIPs (`28105` Matthews, `28227` Mint Hill) — those fall outside the 8 mi cap. Also reject any ZIP in the explicit avoid set regardless of neighborhood name. Apply this filter BEFORE distance calc.
+- Are in or near preferred neighborhoods (fallback check if ZIP is not visible in the listing)
 - Are not in `seen_links` or `seen_addresses`
 
 Collect **at least 20 raw candidates** before filtering, so Step 5's diversity rule has room to work.
