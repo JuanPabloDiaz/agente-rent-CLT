@@ -60,6 +60,22 @@ const AGENTS = [
     dataStart: '<<<APTO-2BR2BA-DATA-START>>>',
     dataEnd: '<<<APTO-2BR2BA-DATA-END>>>',
   },
+  {
+    // On-demand paystub tracker. Fed by dropping a Costco payroll-portal
+    // screenshot into Claude Code; the agent OCRs the table and creates
+    // one Gmail draft with all visible paystubs as JSON rows. LINK =
+    // 'paystub-YYYY-MM-DD' (synthetic) so re-imports of the same portal
+    // screenshot only append new paystubs.
+    name: 'income',
+    sheetId: '1fWy3rw3y524U2uzmPuuFTltzBhhX88QVNxx1NJXB2QI',
+    sheetName: 'INCOME',
+    subjectPrefix: 'INCOME paystubs',
+    dataStart: '<<<INCOME-DATA-START>>>',
+    dataEnd: '<<<INCOME-DATA-END>>>',
+    // Overrides HTML_DIGEST_COLUMNS for this agent so the emailed table
+    // shows income-relevant columns instead of listing columns.
+    htmlColumns: ['PAY_DATE', 'PERIOD_LABEL', 'GROSS_PAY', 'DEDUCTIONS', 'TAKE_HOME'],
+  },
 ];
 
 const DEFAULT_STATUS = 'Missing';
@@ -624,14 +640,20 @@ const HTML_COLUMN_LABELS = {
   'DISTANCE APROX': 'DISTANCE',
   'EST_PITI': 'PITI',
   'YEAR_BUILT': 'YEAR',
+  'PAY_DATE': 'Pay date',
+  'PERIOD_LABEL': 'Period',
+  'GROSS_PAY': 'Gross',
+  'TAKE_HOME': 'Take home',
+  'DEDUCTIONS': 'Deductions',
 };
 
-const MONEY_COLUMNS = new Set(['PRICE', 'EST_PITI', 'HOA', 'EST_TAXES']);
+const MONEY_COLUMNS = new Set(['PRICE', 'EST_PITI', 'HOA', 'EST_TAXES', 'GROSS_PAY', 'DEDUCTIONS', 'TAKE_HOME']);
 
 const AGENT_HEADLINE = {
   'apto-clt': 'New 1BR/studio picks',
   'apto-2bed-2bath': 'New 2BR/2BA picks',
   'casa-clt': 'New houses / condos',
+  'income': 'New paystubs',
 };
 
 const STATUS_BADGE_COLOR = {
@@ -678,7 +700,8 @@ function renderDigestHtml(agent, rows, stats, tabUrl, date) {
     return renderEmptyDigestHtml(agent, tabUrl, date);
   }
 
-  const presentCols = HTML_DIGEST_COLUMNS.filter(function (col) {
+  const columnList = (agent && agent.htmlColumns) || HTML_DIGEST_COLUMNS;
+  const presentCols = columnList.filter(function (col) {
     return rows.some(function (r) {
       return r[col] !== undefined && r[col] !== null && r[col] !== '';
     });
@@ -736,7 +759,7 @@ function renderDigestHtml(agent, rows, stats, tabUrl, date) {
 
   return '<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;color:#202124;max-width:960px;margin:0 auto;padding:20px;background:#fff;">' +
     '<h2 style="margin:0 0 4px 0;font-weight:500;font-size:20px;">' + escapeHtml(headline) + '</h2>' +
-    '<p style="color:#5f6368;margin:0 0 4px 0;font-size:13px;">' + rows.length + ' listings · ' + escapeHtml(date || '') + '</p>' +
+    '<p style="color:#5f6368;margin:0 0 4px 0;font-size:13px;">' + rows.length + ' rows · ' + escapeHtml(date || '') + '</p>' +
     statsLine +
     '<p style="margin:8px 0 20px 0;"><a href="' + escapeHtml(tabUrl) +
     '" style="display:inline-block;background:#1a73e8;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:500;">Open the spreadsheet</a></p>' +
