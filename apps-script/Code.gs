@@ -74,6 +74,18 @@ const DEFAULT_STATUS = 'Missing';
 // current agent's payload.
 const REFRESH_ON_UPDATE = ['PRICE', 'SCORE', 'SOURCE', 'SQF'];
 
+// Income-proof columns (user-owned, but Apps Script seeds a default
+// multiplier and a per-row formula on append so the columns don't
+// require per-row manual work). INCOME_MULT = landlord's rent-multiple
+// (default 3x). INCOME_REQ = PRICE * INCOME_MULT via a per-row formula
+// so it stays live when the user edits the multiplier or the poller
+// updates the price. Formula preservation is enforced in
+// updateRowInPlace() via getFormulas() so a price refresh does not
+// flatten the formula back to a stale number.
+const INCOME_MULT_DEFAULT = 3;
+const INCOME_MULT_COL = 'INCOME_MULT';
+const INCOME_REQ_COL = 'INCOME_REQ';
+
 // ===== Cross-agent seed snapshot config =====
 //
 // The `apto-2bed-2bath` agent uses a filtered snapshot of the `apto-clt`
@@ -333,19 +345,42 @@ function appendRows(sheet, headerMap, rows) {
   const headersOrdered = new Array(lastCol).fill(null);
   Object.entries(headerMap).forEach(([name, idx]) => { headersOrdered[idx] = name; });
 
-  const matrix = rows.map(row => {
+  const startRow = sheet.getLastRow() + 1;
+  const priceLetter = headerMap['PRICE'] !== undefined ? columnLetter(headerMap['PRICE'] + 1) : null;
+  const multLetter = headerMap[INCOME_MULT_COL] !== undefined ? columnLetter(headerMap[INCOME_MULT_COL] + 1) : null;
+
+  const matrix = rows.map((row, rowIdx) => {
+    const sheetRowNum = startRow + rowIdx;
     return headersOrdered.map((header) => {
       if (header === null) return '';
       let val = row[header];
       if (header === 'STATUS' && (val === '' || val === null || val === undefined)) {
         val = DEFAULT_STATUS;
       }
+      if (header === INCOME_MULT_COL && (val === '' || val === null || val === undefined)) {
+        val = INCOME_MULT_DEFAULT;
+      }
+      if (header === INCOME_REQ_COL && (val === '' || val === null || val === undefined) && priceLetter && multLetter) {
+        val = '=IFERROR(' + priceLetter + sheetRowNum + '*' + multLetter + sheetRowNum + ',"")';
+      }
       return val !== undefined && val !== null ? val : '';
     });
   });
 
-  const startRow = sheet.getLastRow() + 1;
   sheet.getRange(startRow, 1, matrix.length, lastCol).setValues(matrix);
+}
+
+// A → 1, Z → 26, AA → 27, ... Sheets uses 1-based column indices; the
+// column *letter* is what formula strings need.
+function columnLetter(colNum) {
+  let s = '';
+  let n = colNum;
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
 }
 
 function updateRowInPlace(sheet, headerMap, existing, incoming, todayDate) {
@@ -358,8 +393,14 @@ function updateRowInPlace(sheet, headerMap, existing, incoming, todayDate) {
   if (newPrice === null || oldPrice === null || newPrice === oldPrice) return;
 
   // Read the row as it currently is (in case STATUS or NOTES was edited
-  // between snapshot time and now).
-  const currentRow = sheet.getRange(rowNumber, 1, 1, lastCol).getValues()[0];
+  // between snapshot time and now). Merge formulas over values so any
+  // cell that holds a formula (e.g. INCOME_REQ) is preserved on
+  // rewrite — getValues() returns computed numbers and would otherwise
+  // flatten the formula.
+  const rng = sheet.getRange(rowNumber, 1, 1, lastCol);
+  const currentValues = rng.getValues()[0];
+  const currentFormulas = rng.getFormulas()[0];
+  const currentRow = currentValues.map((v, i) => currentFormulas[i] || v);
   const currentMap = {};
   Object.entries(headerMap).forEach(([name, idx]) => { currentMap[name] = currentRow[idx]; });
 
@@ -809,6 +850,68 @@ function showAptoCltStatusHistogram() {
     .forEach(([k, v]) => console.log('  ' + v + '\t' + k));
   console.log('');
   console.log('Currently included as seeds: ' + JSON.stringify([...SEED_INCLUDE]));
+}
+
+// One-shot backfill for the INCOME_MULT + INCOME_REQ columns on the two
+// rental tabs (apto-clt '1 bed', apto-2bed-2bath). Idempotent: only
+// writes to cells that are currently blank, so re-running it after
+// manual per-row overrides is safe. Skips casa-clt (purchase, uses
+// PITI + DTI rather than a rent-multiple). Run once from the editor
+// after adding the two column headers to the sheet.
+function backfillIncomeColumns() {
+  const rentalAgents = AGENTS.filter(a => a.name === 'apto-clt' || a.name === 'apto-2bed-2bath');
+  rentalAgents.forEach(agent => {
+    try {
+      const sheet = openAgentSheet(agent);
+      const headerMap = readHeaderMap(sheet);
+      const multIdx = headerMap[INCOME_MULT_COL];
+      const reqIdx = headerMap[INCOME_REQ_COL];
+      const priceIdx = headerMap['PRICE'];
+      if (multIdx === undefined && reqIdx === undefined) {
+        console.log('[' + agent.name + '] neither ' + INCOME_MULT_COL + ' nor ' + INCOME_REQ_COL + ' present; skipping');
+        return;
+      }
+      const lastRow = sheet.getLastRow();
+      if (lastRow < 2) {
+        console.log('[' + agent.name + '] no data rows');
+        return;
+      }
+      const lastCol = sheet.getLastColumn();
+      const rng = sheet.getRange(2, 1, lastRow - 1, lastCol);
+      const values = rng.getValues();
+      const formulas = rng.getFormulas();
+
+      const priceLetter = priceIdx !== undefined ? columnLetter(priceIdx + 1) : null;
+      const multLetter = multIdx !== undefined ? columnLetter(multIdx + 1) : null;
+
+      let filledMult = 0;
+      let filledReq = 0;
+
+      values.forEach((rowVals, i) => {
+        const sheetRow = i + 2;
+        if (multIdx !== undefined) {
+          const cur = rowVals[multIdx];
+          if (cur === '' || cur === null || cur === undefined) {
+            sheet.getRange(sheetRow, multIdx + 1).setValue(INCOME_MULT_DEFAULT);
+            filledMult++;
+          }
+        }
+        if (reqIdx !== undefined && priceLetter && multLetter) {
+          const curVal = rowVals[reqIdx];
+          const curFormula = formulas[i][reqIdx];
+          if (!curFormula && (curVal === '' || curVal === null || curVal === undefined)) {
+            const formula = '=IFERROR(' + priceLetter + sheetRow + '*' + multLetter + sheetRow + ',"")';
+            sheet.getRange(sheetRow, reqIdx + 1).setFormula(formula);
+            filledReq++;
+          }
+        }
+      });
+
+      console.log('[' + agent.name + '] backfill: ' + INCOME_MULT_COL + '=' + filledMult + ' rows, ' + INCOME_REQ_COL + '=' + filledReq + ' rows');
+    } catch (e) {
+      console.error('[' + agent.name + '] backfill failed: ' + (e && e.stack ? e.stack : e));
+    }
+  });
 }
 
 function resetProcessedDrafts() {

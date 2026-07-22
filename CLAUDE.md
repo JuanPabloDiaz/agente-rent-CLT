@@ -87,5 +87,15 @@ State is per-agent script properties: `processed_drafts_<agent.name>`. A legacy 
 - Matches incoming rows to existing rows by `LINK` first, then by `normalizeAddress(ADDRESS)` (strips `unit/apt/suite/#…` and punctuation). Same building never inserted twice regardless of source.
 - If `PRICE` changed on a matched row, `updateRowInPlace()` refreshes the fields in `REFRESH_ON_UPDATE` (`PRICE, SCORE, SOURCE, SQF`), prepends a dated price-change line to `NOTES` (capped at 1000 chars), and **preserves** `ID`, original `DATE`, `LINK`, `DISTANCE APROX`, `ADDRESS`, `NAME`, and any user-set `STATUS` other than empty. `LINK` and `DISTANCE APROX` are deliberately excluded so the user can hand-edit them (better URL, more accurate distance) without the poller overwriting the fix on the next price change.
 - Empty `STATUS` on append defaults to `"Missing"`.
+- `updateRowInPlace()` reads `.getFormulas()` alongside `.getValues()` and rewrites formula cells as formula strings, so **any** cell containing a formula is preserved across a price update — not just the two income columns. Break this at your peril.
 
 If you're changing the payload schema, keep `REFRESH_ON_UPDATE` in sync — silently dropped fields on price updates are the most likely bug.
+
+## Income-proof columns (rental tabs only)
+
+Both rental tabs (`1 bed`, `apto-2bed-2bath`) carry two user-facing columns that Apps Script seeds on append but no agent ever emits in a payload:
+
+- **`INCOME_MULT`** — rent-multiple the landlord asks for (default `3`, overridable per row to e.g. `2.5` if the listing says so). Seeded to `INCOME_MULT_DEFAULT` on append when blank.
+- **`INCOME_REQ`** — monthly income you'd need to qualify, as a per-row formula `=IFERROR(PRICE*INCOME_MULT,"")`. Formula references live cells, so it recomputes when either the poller updates `PRICE` or you edit `INCOME_MULT`.
+
+Both are user-owned. Existing rows: run `backfillIncomeColumns()` in the Apps Script editor to seed defaults and formulas for history. `casa-clt` deliberately skips these — purchase uses DTI on PITI, not a landlord rent-multiple.

@@ -130,6 +130,11 @@ does nothing harmful.
 - `showAptoCltStatusHistogram()` — log the count of each distinct
   STATUS value in the `1 bed` tab plus which values `SEED_INCLUDE`
   covers. Use to debug unexpected snapshot counts.
+- `backfillIncomeColumns()` — one-shot seeder for the `INCOME_MULT` /
+  `INCOME_REQ` columns on the two rental tabs. Sets blank `INCOME_MULT`
+  cells to the default (`3`) and blank `INCOME_REQ` cells to a per-row
+  formula `=IFERROR(PRICE*INCOME_MULT,"")`. Idempotent; skips
+  casa-clt. Run once after adding the two headers in row 1.
 
 ## Weekly seed snapshot (apto-clt → apto-2bed-2bath)
 
